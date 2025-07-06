@@ -112,4 +112,9 @@ public class AuthRestController {
     public UserResponse getCurrentUser() {
         return authService.getCurrentUser();
     }
+
+    @PostMapping(value = "/google-sign-in", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> googleSignIn(@Valid @RequestBody GoogleSignInRequest googleSignInRequest) {
+        return authService.googleSignIn(googleSignInRequest.getIdToken());
+    }
 }

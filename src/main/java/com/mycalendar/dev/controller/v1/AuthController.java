@@ -1,4 +1,4 @@
-package com.mycalendar.dev.controller;
+package com.mycalendar.dev.controller.v1;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -46,7 +46,7 @@ public class AuthController {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     new NetHttpTransport(),
                     JacksonFactory.getDefaultInstance())
-                    .setAudience(Collections.singletonList("356083374793-mbdr9e7v0sctd8glmvhsgqnlvkjr14cu.apps.googleusercontent.com")) // ใช้ webClientId ของคุณ
+                    .setAudience(Collections.singletonList("356083374793-mcr38v6de8h922c5q4l96884drkosskl.apps.googleusercontent.com")) // ใช้ webClientId ของคุณ
                     .build();
 
             GoogleIdToken idToken = verifier.verify(idTokenString);

@@ -1,5 +1,7 @@
 package com.mycalendar.dev.service.implement;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.mycalendar.dev.exception.APIException;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.payload.response.JwtResponse;
@@ -10,6 +12,7 @@ import com.mycalendar.dev.service.IAuthService;
 import com.mycalendar.dev.util.EntityMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,6 +22,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.MediaType;
+import java.util.Map;
 
 import java.util.Date;
 
@@ -36,6 +41,9 @@ public class AuthService implements IAuthService {
 
     @Value("${app.refresh.token.expiration.milliseconds}")
     private long refreshExpiresIn;
+
+    @Value("${app.google.client-id}")
+    private String googleClientId;
 
     public AuthService(AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtTokenProvider jwtTokenProvider, UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
@@ -145,5 +153,38 @@ public class AuthService implements IAuthService {
         jwtResponse.setRefreshToken(refreshToken);
         jwtResponse.setRefreshExpiresIn(refreshExpiresIn / 1000);
         return jwtResponse;
+    }
+
+
+    public ResponseEntity<?> googleSignIn(String idTokenString) {
+        GoogleIdToken.Payload payload = verifyGoogleIdToken(idTokenString);
+        if (payload == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("error", "Invalid ID token."));
+        }
+
+        UserResponse userResponse = new UserResponse();
+        userResponse.setEmail(payload.getEmail());
+        userResponse.setName((String) payload.get("name"));
+        userResponse.setImageUrl((String) payload.get("picture"));
+
+        return ResponseEntity.ok(userResponse);
+    }
+
+    private GoogleIdToken.Payload verifyGoogleIdToken(String idTokenString) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new com.google.api.client.http.javanet.NetHttpTransport(),
+                    com.google.api.client.json.jackson2.JacksonFactory.getDefaultInstance())
+                    .setAudience(java.util.Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            return (idToken != null) ? idToken.getPayload() : null;
+        } catch (Exception e) {
+            // Use logger or handle exception properly
+            return null;
+        }
     }
 }
