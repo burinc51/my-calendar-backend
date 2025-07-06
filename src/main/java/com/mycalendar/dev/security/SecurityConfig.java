@@ -25,6 +25,10 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final String[] PERMITTED_PATHS = {
+            "/swagger-ui/**"
+    };
+
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -58,6 +62,7 @@ public class SecurityConfig {
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/v1/users").permitAll()
+                                .requestMatchers("/api/auth/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptionHandling ->
