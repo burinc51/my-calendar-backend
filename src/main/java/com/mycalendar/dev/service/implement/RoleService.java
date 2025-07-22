@@ -57,8 +57,10 @@ public class RoleService implements IRoleService {
 
     @Override
     public PaginationResponse getAll(int page, int size, String filter, String sort, String keyword) {
-        Sort sortDir = sort.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(filter).ascending() : Sort.by(filter).descending();
-        Pageable pageable = PageRequest.of(page, size, sortDir);
+        Sort sortDir = sort.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(filter).ascending()
+                : Sort.by(filter).descending();
+        Pageable pageable = PageRequest.of(page - 1, size, sortDir);
 
         GenericSpecification<Role> genericSpec = new GenericSpecification<>();
         List<String> fields = List.of("id", "name");

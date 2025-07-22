@@ -26,7 +26,10 @@ import java.util.List;
 public class SecurityConfig {
 
     private static final String[] PERMITTED_PATHS = {
-            "/swagger-ui/**"
+            "/v1/auth/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/api/auth/**"
     };
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
@@ -56,14 +59,11 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize ->
-                        authorize
-                                .requestMatchers("/v1/auth/**").permitAll()
-                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/v1/users").permitAll()
-                                .requestMatchers("/api/auth/**").permitAll()
-                                .anyRequest().authenticated()
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(PERMITTED_PATHS).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/users").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling.authenticationEntryPoint(jwtAuthenticationEntryPoint)

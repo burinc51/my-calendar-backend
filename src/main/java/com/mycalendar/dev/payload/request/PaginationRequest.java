@@ -10,21 +10,21 @@ import java.util.Map;
 
 @Data
 public class PaginationRequest {
-    @Schema(example = "0")
-    private int page;
+    @Schema(example = "1")
+    private int pageNumber;
     @Schema(example = "10")
-    private int size;
+    private int pageSize;
     @Schema(example = "id")
-    private String filter;
-    @Schema(example = "asc")
-    private String sort;
-    private Map<String, Object> keyword;
+    private String sortBy;
+    @Schema(example = "DESC")
+    private String sortOrder;
+    private Map<String, Object> filter;
 
     @JsonIgnore
     public PageRequest getPageRequest() {
-        Sort sortDir = sort.equalsIgnoreCase(Sort.Direction.ASC.name())
-                ? Sort.by(filter).ascending()
-                : Sort.by(filter).descending();
-        return PageRequest.of(page, size, sortDir);
+        Sort sortDir = sortOrder.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+        return PageRequest.of(pageNumber - 1, pageSize, sortDir);
     }
 }

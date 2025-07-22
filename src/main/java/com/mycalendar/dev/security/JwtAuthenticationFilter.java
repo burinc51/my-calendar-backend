@@ -43,27 +43,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
         String accessToken = getAccessTokenFromRequest(request);
         String refreshToken = getRefreshTokenFromRequest(request);
-        if (StringUtils.hasText(accessToken) && jwtTokenProvider.validateToken(accessToken)) {
-            String username = jwtTokenProvider.getUsername(accessToken);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-        }
 
-        if (accessToken != null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Access Token");
+        if (StringUtils.hasText(accessToken)) {
+            if (!jwtTokenProvider.validateToken(accessToken)) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Access Token");
+                return;
+            }
+
             if (jwtTokenProvider.isTokenRevoked(accessToken)) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Access Token has been revoked");
                 return;
             }
-            return;
+
+            // Token valid → load user & set security context
+            String username = jwtTokenProvider.getUsername(accessToken);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UsernamePasswordAuthenticationToken authenticationToken =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
 
-        if (refreshToken != null) {
+        if (StringUtils.hasText(refreshToken)) {
             if (jwtTokenProvider.isRefreshTokenRevoked(refreshToken)) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Refresh Token has been revoked");
                 return;
