@@ -28,8 +28,7 @@ public class SecurityConfig {
     private static final String[] PERMITTED_PATHS = {
             "/v1/auth/**",
             "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/api/auth/**"
+            "/v3/api-docs/**"
     };
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;

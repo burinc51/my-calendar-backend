@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
-public class NoteResponse {
-    private UUID noteId;
+public class EventResponse {
+    private Long eventId;
     private String userId;
     private String title;
     private String description;
