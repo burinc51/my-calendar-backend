@@ -1,7 +1,9 @@
 package com.mycalendar.dev.service.implement;
 
+
 import com.mycalendar.dev.entity.Event;
 import com.mycalendar.dev.entity.User;
+import com.mycalendar.dev.enums.FileType;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.payload.request.EventRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
@@ -11,10 +13,14 @@ import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IEventService;
 import com.mycalendar.dev.util.EntityMapper;
+import com.mycalendar.dev.util.FileHandler;
 import com.mycalendar.dev.util.GenericSpecification;
+import io.micrometer.common.lang.Nullable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +29,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class EventService implements IEventService {
+
+    @Value("${spring.application.base-url}")
+    private String baseUrl;
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
@@ -42,22 +51,48 @@ public class EventService implements IEventService {
         return EntityMapper.mapToEntity(event, EventResponse.class);
     }
 
-    public EventResponse saveOrUpdate(EventRequest eventRequest, Long eventId, Long userId) {
+    public EventResponse saveOrUpdate(EventRequest eventRequest, Long eventId, Long userId, @Nullable MultipartFile file) {
+
+        // ตรวจสอบ user
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
 
         Event event;
         if (eventId != null) {
-            event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException("Note", "id", eventId.toString()));
-            EntityMapper.mapToEntity(eventRequest, Event.class);
+            // อัปเดต Event เดิม
+            event = eventRepository.findById(eventId)
+                    .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
         } else {
+            // สร้าง Event ใหม่
             event = EntityMapper.mapToEntity(eventRequest, Event.class);
             event.setEventId(null);
+            event.setUser(user);
+            event = eventRepository.save(event); // บันทึกเพื่อให้ได้ eventId
         }
-        event.setUser(user);
+
+        // จัดการไฟล์ (ถ้ามี)
+        if (file != null && !file.isEmpty()) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new IllegalArgumentException("Only image files are allowed");
+            }
+            String fileUpload = FileHandler.upload(file, FileType.IMAGES, event.getImageUrl(), "/event/" + event.getEventId());
+            if (fileUpload != null) {
+                event.setImageUrl(fileUpload);
+            } else {
+                throw new RuntimeException("Failed to upload file");
+            }
+        }
+
+        // บันทึก event อีกครั้งถ้ามีการเปลี่ยนแปลง
         event = eventRepository.save(event);
 
-        return EntityMapper.mapToEntity(event, EventResponse.class);
+        // แปลงเป็น EventResponse และเพิ่ม baseUrl
+        EventResponse response = EntityMapper.mapToEntity(event, EventResponse.class);
+        if (response.getImageUrl() != null) {
+            response.setImageUrl(baseUrl + response.getImageUrl());
+        }
+        return response;
     }
 
     @Override

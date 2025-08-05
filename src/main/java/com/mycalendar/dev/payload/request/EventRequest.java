@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class EventRequest {
     private Long eventId;
+    private Long userId;
     private String title;
     private String description;
     private LocalDateTime startDate;

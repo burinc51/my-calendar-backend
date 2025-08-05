@@ -27,9 +27,14 @@ public class FileHandler {
                 byte[] bytes = file.getBytes();
                 String fileExtension = getFileExtension(Objects.requireNonNull(file.getOriginalFilename()));
 
-                String newFileName = existingFileName != null
-                        ? getFileNameWithoutExtension(existingFileName.split("/")[2]) + fileExtension
-                        : UUID.randomUUID() + fileExtension;
+                String newFileName;
+                if (existingFileName != null) {
+                    String[] parts = existingFileName.split("/");
+                    String baseName = parts.length > 2 ? getFileNameWithoutExtension(parts[2]) : getFileNameWithoutExtension(existingFileName);
+                    newFileName = baseName + fileExtension;
+                } else {
+                    newFileName = UUID.randomUUID() + fileExtension;
+                }
 
                 Path path = Paths.get((subDir != null ? UPLOAD_DIR + subDir : UPLOAD_DIR) + "/" + newFileName);
                 Files.createDirectories(path.getParent());
