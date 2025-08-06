@@ -7,5 +7,5 @@ import lombok.Setter;
 @Getter
 public class AddMemberRequest {
     private Long memberId;
-    private Long userId;
+    private Long userAdminId;
 }

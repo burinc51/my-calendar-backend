@@ -4,12 +4,17 @@ import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.entity.GroupMember;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.payload.request.GroupRequest;
+import com.mycalendar.dev.payload.response.GroupMemberResponse;
+import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.repository.GroupMemberRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IGroupService;
+import com.mycalendar.dev.util.EntityMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class GroupService implements IGroupService {
@@ -45,8 +50,8 @@ public class GroupService implements IGroupService {
 
 
     @Transactional
-    public void addMember(Long groupId, Long memberId, Long userId) {
-        User currentUser = userRepository.findById(userId)
+    public void addMember(Long groupId, Long memberId, Long userAdminId) {
+        User currentUser = userRepository.findById(userAdminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
@@ -72,4 +77,69 @@ public class GroupService implements IGroupService {
         groupMember.setRole("MEMBER");
         groupMemberRepository.save(groupMember);
     }
+
+    @Override
+    public GroupResponse getGroupById(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        GroupResponse response = EntityMapper.mapToEntity(group, GroupResponse.class);
+
+        List<GroupMemberResponse> memberResponses = groupMemberRepository.findByGroupGroupId(groupId)
+                .stream()
+                .map(gm -> {
+                    GroupMemberResponse dto = new GroupMemberResponse();
+                    dto.setUserId(gm.getUser().getId());
+                    dto.setUsername(gm.getUser().getUsername());
+                    dto.setRole(gm.getRole());
+                    return dto;
+                })
+                .toList();
+
+        response.setMembers(memberResponses);
+
+        return response;
+    }
+
+    @Transactional
+    public void removeMembers(Long groupId, List<Long> memberIds, Long userAdminId) {
+        User currentUser = userRepository.findById(userAdminId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
+                .map(gm -> "GROUP_ADMIN".equals(gm.getRole()))
+                .orElse(false);
+        if (!isGroupAdmin) {
+            throw new RuntimeException("Only group admins can remove members");
+        }
+
+        for (Long memberId : memberIds) {
+            User member = userRepository.findById(memberId)
+                    .orElseThrow(() -> new RuntimeException("Member not found"));
+
+            GroupMember groupMember = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, member.getId())
+                    .orElseThrow(() -> new RuntimeException("User is not a member of the group"));
+
+            groupMemberRepository.delete(groupMember);
+        }
+    }
+
+    @Override
+    public void delete(Long groupId, Long userAdminId) {
+        User currentUser = userRepository.findById(userAdminId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+        boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
+                .map(gm -> "GROUP_ADMIN".equals(gm.getRole()))
+                .orElse(false);
+        if (!isGroupAdmin) {
+            throw new RuntimeException("Only group admins can delete groups");
+        }
+        groupMemberRepository.deleteAll(groupMemberRepository.findByGroupGroupId(groupId));
+        groupRepository.delete(group);
+    }
+
 }
