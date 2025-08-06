@@ -3,6 +3,7 @@ package com.mycalendar.dev.payload.request;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 public class EventRequest {
@@ -19,4 +20,6 @@ public class EventRequest {
     private String color;
     private String category;
     private String priority;
+    private Long groupId;
+    private Set<Long> assigneeIds;
 }

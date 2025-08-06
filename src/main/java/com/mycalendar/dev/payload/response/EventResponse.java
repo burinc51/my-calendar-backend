@@ -2,13 +2,16 @@ package com.mycalendar.dev.payload.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class EventResponse {
     private Long eventId;
-    private String userId;
+    private Long userId;
     private String title;
     private String description;
     private String imageUrl;
@@ -24,4 +27,13 @@ public class EventResponse {
     private String color;
     private String category;
     private String priority;
+    private String groupId;
+    private List<AssigneeDTO> assignees;
+
+    @Getter
+    @Setter
+    public static class AssigneeDTO {
+        private Long userId;
+        private String userName;
+    }
 }
