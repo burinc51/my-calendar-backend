@@ -23,7 +23,7 @@ public class GroupRestController {
 
     @PostMapping("/create")
     public ResponseEntity<String> create(@Valid @RequestBody GroupRequest groupRequest) {
-        groupService.createGroup(groupRequest, 1L);
+        groupService.createGroup(groupRequest, groupRequest.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body("Group created successfully.");
     }
 
@@ -42,13 +42,13 @@ public class GroupRestController {
     public ResponseEntity<String> removeMembers(
             @PathVariable Long groupId,
             @RequestBody RemoveMembersRequest request) {
-        groupService.removeMembers(groupId, request.getMemberIds(), request.getUserAdminId());
+        groupService.removeMembers(groupId, request.getMemberIds());
         return ResponseEntity.ok("Members removed successfully.");
     }
 
     @DeleteMapping("")
-    public ResponseEntity<String> delete(@RequestParam Long groupId, @RequestParam Long userAdminId) {
-        groupService.delete(groupId, userAdminId);
+    public ResponseEntity<String> delete(@RequestParam Long groupId) {
+        groupService.delete(groupId);
         return ResponseEntity.ok("Group deleted successfully.");
     }
 }

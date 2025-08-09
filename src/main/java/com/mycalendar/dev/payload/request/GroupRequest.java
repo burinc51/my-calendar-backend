@@ -8,6 +8,6 @@ import lombok.Setter;
 public class GroupRequest {
     private String groupName;
     private String description;
-    private String userId;
+    private Long userId;
     private String imageUrl;
 }

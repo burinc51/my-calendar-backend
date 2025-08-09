@@ -11,6 +11,7 @@ import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IGroupService;
 import com.mycalendar.dev.util.EntityMapper;
+import com.mycalendar.dev.util.SecurityUtil;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -102,7 +103,11 @@ public class GroupService implements IGroupService {
     }
 
     @Transactional
-    public void removeMembers(Long groupId, List<Long> memberIds, Long userAdminId) {
+    public void removeMembers(Long groupId, List<Long> memberIds) {
+        Long userAdminId = SecurityUtil.getCurrentUserId();
+        if (userAdminId == null) {
+            throw new RuntimeException("User not logged in");
+        }
         User currentUser = userRepository.findById(userAdminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Group group = groupRepository.findById(groupId)
@@ -127,7 +132,11 @@ public class GroupService implements IGroupService {
     }
 
     @Override
-    public void delete(Long groupId, Long userAdminId) {
+    public void delete(Long groupId) {
+        Long userAdminId = SecurityUtil.getCurrentUserId();
+        if (userAdminId == null) {
+            throw new RuntimeException("User not logged in");
+        }
         User currentUser = userRepository.findById(userAdminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Group group = groupRepository.findById(groupId)

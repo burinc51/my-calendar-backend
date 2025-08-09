@@ -12,24 +12,20 @@ import com.mycalendar.dev.service.IAuthService;
 import com.mycalendar.dev.util.EntityMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.http.MediaType;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.Map;
 
 import java.util.Date;
+import java.util.Map;
 
 @Service
 public class AuthService implements IAuthService {
@@ -64,7 +60,6 @@ public class AuthService implements IAuthService {
                     new UsernamePasswordAuthenticationToken(usernameOrEmail, password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             UserDetails userDetails = userDetailsService.loadUserByUsername(usernameOrEmail);
-            System.out.println("u: " + userDetails);
             String token = jwtTokenProvider.generateToken(userDetails);
             String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
             return createAccessToken(token, refreshToken);

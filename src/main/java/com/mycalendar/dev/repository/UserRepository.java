@@ -29,4 +29,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query(value = "select * from users where activate_code = :activateCode", nativeQuery = true)
     Optional<User> findByActivateCode(@Param("activateCode") String activateCode);
+
+    @Query("SELECT u.id FROM User u WHERE u.username = :username")
+    Long findIdByUsername(@Param("username") String username);
 }

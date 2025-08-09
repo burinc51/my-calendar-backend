@@ -13,7 +13,7 @@ public interface IGroupService {
 
     GroupResponse getGroupById(Long groupId);
 
-    void removeMembers(Long groupId, List<Long> memberIds, Long userAdminId);
+    void removeMembers(Long groupId, List<Long> memberIds);
 
-    void delete(Long groupId, Long userAdminId);
+    void delete(Long groupId);
 }
