@@ -5,11 +5,15 @@ import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.EventResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IEventService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import static com.mycalendar.dev.helper.ApiDocHelper.CREATE_EVENT_DESCRIPTION;
+import static com.mycalendar.dev.helper.ApiDocHelper.CREATE_EVENT_SUMMARY;
 
 @RestController
 @RequestMapping("/api/events")
@@ -20,6 +24,7 @@ public class EventRestController {
         this.eventService = eventService;
     }
 
+    @Operation(summary = CREATE_EVENT_SUMMARY, description = CREATE_EVENT_DESCRIPTION)
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestPart(value = "file") MultipartFile file) {
         Long userId = eventRequest.getUserId();
