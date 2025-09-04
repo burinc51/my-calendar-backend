@@ -2,12 +2,14 @@ package com.mycalendar.dev.service.implement;
 
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.entity.GroupMember;
+import com.mycalendar.dev.entity.RoleGroup;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.repository.GroupMemberRepository;
 import com.mycalendar.dev.repository.GroupRepository;
+import com.mycalendar.dev.repository.RoleGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IGroupService;
 import com.mycalendar.dev.util.EntityMapper;
@@ -22,17 +24,20 @@ public class GroupService implements IGroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final RoleGroupRepository roleGroupRepository;
 
-    public GroupService(GroupRepository groupRepository, GroupMemberRepository groupMemberRepository, UserRepository userRepository) {
+    public GroupService(GroupRepository groupRepository, GroupMemberRepository groupMemberRepository, UserRepository userRepository, RoleGroupRepository roleGroupRepository) {
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.userRepository = userRepository;
+        this.roleGroupRepository = roleGroupRepository;
     }
 
     @Transactional
     public Group createGroup(GroupRequest request, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        RoleGroup roleGroup = roleGroupRepository.findByName("ADMIN").orElseThrow(() -> new RuntimeException("Role not found"));
 
         Group group = new Group();
         group.setGroupName(request.getGroupName());
@@ -43,7 +48,7 @@ public class GroupService implements IGroupService {
         GroupMember groupMember = new GroupMember();
         groupMember.setGroup(group);
         groupMember.setUser(user);
-        groupMember.setRole("GROUP_ADMIN");
+        groupMember.setRoleGroup(roleGroup);
         groupMemberRepository.save(groupMember);
 
         return group;
@@ -60,7 +65,7 @@ public class GroupService implements IGroupService {
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
         boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
-                .map(gm -> "GROUP_ADMIN".equals(gm.getRole()))
+                .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
                 .orElse(false);
         if (!isGroupAdmin) {
             throw new RuntimeException("Only group admins can add members");
@@ -72,10 +77,12 @@ public class GroupService implements IGroupService {
             throw new RuntimeException("User is already a member of the group");
         }
 
+        RoleGroup roleGroup = roleGroupRepository.findByName("MEMBER").orElseThrow(() -> new RuntimeException("Role not found"));
+
         GroupMember groupMember = new GroupMember();
         groupMember.setGroup(group);
         groupMember.setUser(member);
-        groupMember.setRole("MEMBER");
+        groupMember.setRoleGroup(roleGroup);
         groupMemberRepository.save(groupMember);
     }
 
@@ -92,7 +99,7 @@ public class GroupService implements IGroupService {
                     GroupMemberResponse dto = new GroupMemberResponse();
                     dto.setUserId(gm.getUser().getId());
                     dto.setUsername(gm.getUser().getUsername());
-                    dto.setRole(gm.getRole());
+                    dto.setRole(gm.getRoleGroup().getName());
                     return dto;
                 })
                 .toList();
@@ -114,7 +121,7 @@ public class GroupService implements IGroupService {
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
         boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
-                .map(gm -> "GROUP_ADMIN".equals(gm.getRole()))
+                .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
                 .orElse(false);
         if (!isGroupAdmin) {
             throw new RuntimeException("Only group admins can remove members");
@@ -142,7 +149,7 @@ public class GroupService implements IGroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
         boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
-                .map(gm -> "GROUP_ADMIN".equals(gm.getRole()))
+                .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
                 .orElse(false);
         if (!isGroupAdmin) {
             throw new RuntimeException("Only group admins can delete groups");

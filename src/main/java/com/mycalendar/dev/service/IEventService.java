@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface IEventService {
     EventResponse saveEvent(EventRequest eventRequest, Long userId);
 
-    EventResponse saveOrUpdate(EventRequest eventRequest, Long eventId, Long userId, MultipartFile file);
+    EventResponse saveOrUpdate(EventRequest eventRequest, Long eventId, Long userId, MultipartFile file) throws IllegalAccessException;
 
     EventResponse getEventById(Long eventId);
 

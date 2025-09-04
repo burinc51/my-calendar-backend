@@ -16,12 +16,12 @@ public class GroupMember extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "group_id", nullable = false)
     private Group group;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(nullable = false)
-    private String role; // GROUP_ADMIN or MEMBER
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_group_id", nullable = false)
+    private RoleGroup roleGroup;
 }

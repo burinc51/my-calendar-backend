@@ -31,7 +31,7 @@ public class ApiDocHelper {
             }
             ```
             
-            - **file** (Content-Type: `image/png` or `image/*`):  
+            - **file** (Content-Type: `image/png` or `image/*`):
               Image to be attached to the event
             """;
 

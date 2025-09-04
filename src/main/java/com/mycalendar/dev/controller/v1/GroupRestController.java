@@ -1,5 +1,6 @@
 package com.mycalendar.dev.controller.v1;
 
+import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.payload.request.AddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.RemoveMembersRequest;
@@ -22,9 +23,9 @@ public class GroupRestController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<String> create(@Valid @RequestBody GroupRequest groupRequest) {
-        groupService.createGroup(groupRequest, groupRequest.getUserId());
-        return ResponseEntity.status(HttpStatus.CREATED).body("Group created successfully.");
+    public ResponseEntity<Group> create(@Valid @RequestBody GroupRequest groupRequest) {
+        Group group = groupService.createGroup(groupRequest, groupRequest.getUserId());
+        return new ResponseEntity<>(group, HttpStatus.CREATED);
     }
 
     @PostMapping("/{groupId}/members")

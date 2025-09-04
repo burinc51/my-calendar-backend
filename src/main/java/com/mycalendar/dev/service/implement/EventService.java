@@ -56,13 +56,21 @@ public class EventService implements IEventService {
         return EntityMapper.mapToEntity(event, EventResponse.class);
     }
 
+    // Java
     @Transactional
-    public EventResponse saveOrUpdate(EventRequest eventRequest, Long eventId, Long userId, @Nullable MultipartFile file) {
+    public EventResponse saveOrUpdate(EventRequest eventRequest, Long eventId, Long userId, @Nullable MultipartFile file) throws IllegalAccessException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
 
         Group group = groupRepository.findById(eventRequest.getGroupId())
                 .orElseThrow(() -> new NotFoundException("Group", "id", eventRequest.getGroupId().toString()));
+
+        // Check user's role in the group
+        var groupMember = groupMemberRepository.findByGroupGroupIdAndUserId(group.getGroupId(), userId)
+                .orElseThrow(() -> new IllegalArgumentException("User is not a member of the group"));
+        if (!"GROUP_ADMIN".equals(groupMember.getRoleGroup().getName())) {
+            throw new IllegalAccessException("Only GROUP_ADMIN can create or update events");
+        }
 
         Event event = (eventId != null)
                 ? eventRepository.findById(eventId)
