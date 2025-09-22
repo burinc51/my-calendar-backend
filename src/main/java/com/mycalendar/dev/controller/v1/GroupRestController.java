@@ -59,4 +59,9 @@ public class GroupRestController {
     public PaginationResponse getAllGroups(@RequestBody PaginationRequest paginationRequest) {
         return groupService.getAllGroups(paginationRequest);
     }
+
+    @PostMapping("/all/{userId}")
+    public PaginationResponse getAllGroupByUser(@PathVariable Long userId, @RequestBody PaginationRequest paginationRequest) {
+        return groupService.getAllGroupByUser(paginationRequest, userId);
+    }
 }

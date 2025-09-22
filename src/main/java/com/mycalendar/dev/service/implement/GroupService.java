@@ -111,7 +111,7 @@ public class GroupService implements IGroupService {
                 })
                 .toList();
 
-        response.setCreatorByUserId(group.getCreator().getId());
+        response.setCreatorId(group.getCreator().getId());
         response.setMembers(memberResponses);
 
         return response;
@@ -173,7 +173,49 @@ public class GroupService implements IGroupService {
         Page<Group> pages = groupRepository.findAll(spec, request.getPageRequest());
 
         List<GroupResponse> content = pages.stream()
-                .map(event -> EntityMapper.mapToEntity(event, GroupResponse.class))
+                .map(group -> {
+                    GroupResponse response = EntityMapper.mapToEntity(group, GroupResponse.class);
+                    response.setCreatorId(group.getCreator().getId());
+                    List<GroupMemberResponse> memberResponses = groupMemberRepository.findByGroupGroupId(group.getGroupId())
+                            .stream()
+                            .map(gm -> {
+                                GroupMemberResponse dto = new GroupMemberResponse();
+                                dto.setUserId(gm.getUser().getId());
+                                dto.setUsername(gm.getUser().getUsername());
+                                dto.setRole(gm.getRoleGroup().getName());
+                                return dto;
+                            })
+                            .toList();
+                    response.setMembers(memberResponses);
+                    return response;
+                })
+                .toList();
+
+        return new PaginationResponse(content, request.getPageNumber(), request.getPageSize(), pages.getTotalElements(), pages.getTotalPages(), pages.isLast());
+    }
+
+
+    @Override
+    public PaginationResponse getAllGroupByUser(PaginationRequest request, Long userId) {
+        Page<Group> pages = groupRepository.findAllByMemberUserId(userId, request.getPageRequest());
+
+        List<GroupResponse> content = pages.stream()
+                .map(group -> {
+                    GroupResponse response = EntityMapper.mapToEntity(group, GroupResponse.class);
+                    response.setCreatorId(group.getCreator().getId());
+                    List<GroupMemberResponse> memberResponses = groupMemberRepository.findByGroupGroupId(group.getGroupId())
+                            .stream()
+                            .map(gm -> {
+                                GroupMemberResponse dto = new GroupMemberResponse();
+                                dto.setUserId(gm.getUser().getId());
+                                dto.setUsername(gm.getUser().getUsername());
+                                dto.setRole(gm.getRoleGroup().getName());
+                                return dto;
+                            })
+                            .toList();
+                    response.setMembers(memberResponses);
+                    return response;
+                })
                 .toList();
         return new PaginationResponse(content, request.getPageNumber(), request.getPageSize(), pages.getTotalElements(), pages.getTotalPages(), pages.isLast());
     }

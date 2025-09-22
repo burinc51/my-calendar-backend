@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Getter
 @Setter
@@ -19,8 +22,10 @@ public class Group extends BaseEntity {
     @Column
     private String description;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
-    
+
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
+    private Set<GroupMember> members = new HashSet<>();
 }

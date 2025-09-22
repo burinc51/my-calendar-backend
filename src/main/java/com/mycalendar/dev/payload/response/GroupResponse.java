@@ -10,7 +10,7 @@ public class GroupResponse {
     private String groupName;
     private String description;
     private String imageUrl;
-    private Long creatorByUserId;
+    private Long creatorId;
     private List<GroupMemberResponse> members;
 
 }

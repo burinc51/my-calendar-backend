@@ -20,4 +20,6 @@ public interface IGroupService {
     void delete(Long groupId);
 
     PaginationResponse getAllGroups(PaginationRequest paginationRequest);
+
+    PaginationResponse getAllGroupByUser(PaginationRequest request, Long userId);
 }

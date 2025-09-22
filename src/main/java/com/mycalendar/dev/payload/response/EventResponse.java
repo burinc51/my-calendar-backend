@@ -27,7 +27,7 @@ public class EventResponse {
     private String color;
     private String category;
     private String priority;
-    private String groupId;
+    private Long groupId;
     private List<AssigneeDTO> assignees;
 
     @Getter
