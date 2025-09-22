@@ -5,19 +5,26 @@ import com.mycalendar.dev.entity.GroupMember;
 import com.mycalendar.dev.entity.RoleGroup;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.payload.request.GroupRequest;
+import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
+import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.repository.GroupMemberRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.RoleGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IGroupService;
 import com.mycalendar.dev.util.EntityMapper;
+import com.mycalendar.dev.util.GenericSpecification;
 import com.mycalendar.dev.util.SecurityUtil;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class GroupService implements IGroupService {
@@ -104,6 +111,7 @@ public class GroupService implements IGroupService {
                 })
                 .toList();
 
+        response.setCreatorByUserId(group.getCreator().getId());
         response.setMembers(memberResponses);
 
         return response;
@@ -117,8 +125,6 @@ public class GroupService implements IGroupService {
         }
         User currentUser = userRepository.findById(userAdminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
 
         boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
                 .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
@@ -158,4 +164,17 @@ public class GroupService implements IGroupService {
         groupRepository.delete(group);
     }
 
+    @Override
+    public PaginationResponse getAllGroups(PaginationRequest request) {
+        Map<String, Object> keywordMap = request.getFilter();
+        List<String> fields = new ArrayList<>(keywordMap.keySet());
+        Specification<Group> spec = new GenericSpecification<Group>().getSpecification(keywordMap, fields);
+
+        Page<Group> pages = groupRepository.findAll(spec, request.getPageRequest());
+
+        List<GroupResponse> content = pages.stream()
+                .map(event -> EntityMapper.mapToEntity(event, GroupResponse.class))
+                .toList();
+        return new PaginationResponse(content, request.getPageNumber(), request.getPageSize(), pages.getTotalElements(), pages.getTotalPages(), pages.isLast());
+    }
 }

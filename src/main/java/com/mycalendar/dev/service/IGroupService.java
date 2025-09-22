@@ -2,7 +2,9 @@ package com.mycalendar.dev.service;
 
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.payload.request.GroupRequest;
+import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupResponse;
+import com.mycalendar.dev.payload.response.PaginationResponse;
 
 import java.util.List;
 
@@ -16,4 +18,6 @@ public interface IGroupService {
     void removeMembers(Long groupId, List<Long> memberIds);
 
     void delete(Long groupId);
+
+    PaginationResponse getAllGroups(PaginationRequest paginationRequest);
 }

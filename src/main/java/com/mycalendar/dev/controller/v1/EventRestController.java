@@ -25,14 +25,14 @@ public class EventRestController {
     }
 
     @Operation(summary = CREATE_EVENT_SUMMARY, description = CREATE_EVENT_DESCRIPTION)
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestPart(value = "file") MultipartFile file) throws IllegalAccessException {
+    @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestPart(value = "file") MultipartFile file) {
         Long userId = eventRequest.getUserId();
         return eventService.saveOrUpdate(eventRequest, null, userId, file);
     }
 
     @PutMapping("/{eventId}/{userId}")
-    public EventResponse createEvent(@RequestBody EventRequest eventRequest, @PathVariable Long eventId, @PathVariable Long userId, MultipartFile file) throws IllegalAccessException {
+    public EventResponse createEvent(@RequestBody EventRequest eventRequest, @PathVariable Long eventId, @PathVariable Long userId, MultipartFile file) {
         return eventService.saveOrUpdate(eventRequest, eventId, userId, file);
     }
 

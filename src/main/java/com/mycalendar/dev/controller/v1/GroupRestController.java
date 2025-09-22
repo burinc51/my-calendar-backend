@@ -3,8 +3,10 @@ package com.mycalendar.dev.controller.v1;
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.payload.request.AddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
+import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.request.RemoveMembersRequest;
 import com.mycalendar.dev.payload.response.GroupResponse;
+import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IGroupService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -51,5 +53,10 @@ public class GroupRestController {
     public ResponseEntity<String> delete(@RequestParam Long groupId) {
         groupService.delete(groupId);
         return ResponseEntity.ok("Group deleted successfully.");
+    }
+
+    @PostMapping("/all")
+    public PaginationResponse getAllGroups(@RequestBody PaginationRequest paginationRequest) {
+        return groupService.getAllGroups(paginationRequest);
     }
 }
