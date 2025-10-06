@@ -20,7 +20,7 @@ public class Event extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
-    @Lob
+    @Column(columnDefinition = "TEXT", length = 10000)
     private String description;
 
     private String imageUrl;
@@ -34,20 +34,15 @@ public class Event extends BaseEntity {
     private String color;
     private String category;
     private String priority;
+    private Long groupId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id")
-    private Group group;
-
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(name = "event_users",
-            joinColumns = @JoinColumn(name = "event_id", referencedColumnName = "eventId"),
-            inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @ManyToMany
+    @JoinTable(
+            name = "event_user",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "event_id")
     )
-    private Set<User> users;
+    private Set<Event> events;
+
 
 }
