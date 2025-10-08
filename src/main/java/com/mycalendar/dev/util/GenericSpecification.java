@@ -1,12 +1,10 @@
 package com.mycalendar.dev.util;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,24 +23,35 @@ public class GenericSpecification<T> {
     }
 
     public Specification<T> getSpecification(Map<String, Object> keywordMap, List<String> fields) {
-        return (Root<T> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) -> {
+        return (Root<T> root, CriteriaQuery<?> query, CriteriaBuilder cb) -> {
             if (keywordMap == null || keywordMap.isEmpty() || fields.isEmpty()) return null;
 
             List<Predicate> predicates = new ArrayList<>();
+            Map<String, Join<?, ?>> joins = new HashMap<>();
 
             for (String field : fields) {
-                if (keywordMap.containsKey(field)) {
-                    Object keywordObj = keywordMap.get(field);
-                    String keyword = (keywordObj != null) ? keywordObj.toString() : null;
+                Object value = keywordMap.get(field);
+                if (value == null) continue;
 
-                    if (keyword != null && !keyword.isEmpty()) {
-                        String likePattern = "%" + keyword.toLowerCase() + "%";
-                        predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(field).as(String.class)), likePattern));
-                    }
+                String[] parts = field.split("\\.");
+                Path<?> path;
+
+                if (parts.length == 1) {
+                    path = root.get(parts[0]);
+                } else {
+                    Join<?, ?> join = joins.computeIfAbsent(parts[0], j -> root.join(j, JoinType.LEFT));
+                    path = join.get(parts[1]);
+                }
+
+                if (value instanceof String stringValue) {
+                    String likePattern = "%" + stringValue.toLowerCase() + "%";
+                    predicates.add(cb.like(cb.lower(path.as(String.class)), likePattern));
+                } else {
+                    predicates.add(cb.equal(path, value));
                 }
             }
 
-            return predicates.isEmpty() ? null : criteriaBuilder.or(predicates.toArray(new Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 }

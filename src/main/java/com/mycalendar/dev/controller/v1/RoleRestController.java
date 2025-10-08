@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import static com.mycalendar.dev.constant.PageConstant.*;
 
 @RestController
-@RequestMapping("/v1/roles")
+@RequestMapping("/api/v1/roles")
 public class RoleRestController {
 
     private final RoleService roleService;

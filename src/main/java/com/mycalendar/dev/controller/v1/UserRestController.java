@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import static com.mycalendar.dev.constant.PageConstant.*;
 
 @RestController
-@RequestMapping("/v1/users")
+@RequestMapping("/api/v1/users")
 public class UserRestController {
 
     private final UserService userService;

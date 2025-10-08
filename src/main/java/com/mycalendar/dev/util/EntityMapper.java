@@ -10,4 +10,8 @@ public class EntityMapper {
     public static <T, U> U mapToEntity(T request, Class<U> entityClass) {
         return modelMapper.map(request, entityClass);
     }
+    
+    public static <T, U> U mapToDto(T entity, Class<U> dtoClass) {
+        return modelMapper.map(entity, dtoClass);
+    }
 }
