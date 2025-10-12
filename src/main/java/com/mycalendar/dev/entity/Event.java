@@ -1,48 +1,41 @@
 package com.mycalendar.dev.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "events")
-public class Event extends BaseEntity {
-
+@Getter
+@Setter
+public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long eventId;
 
     @Column(nullable = false)
-    private String title;
+    private String eventTitle;
 
-    @Column(columnDefinition = "TEXT", length = 10000)
-    private String description;
+    private LocalDateTime eventDate;
 
-    private String imageUrl;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
-    private String location;
-    @Column(nullable = false)
-    private boolean isPinned = false;
-    private LocalDateTime notificationTime;
-    private String repeating;
-    private String color;
-    private String category;
-    private String priority;
-    private Long groupId;
+    // Event - Group (Many-to-One)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id", nullable = false)
+    @JsonIgnore
+    private Group group;
 
+    // Event - User (Many-to-Many)
     @ManyToMany
     @JoinTable(
             name = "event_user",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "event_id")
+            joinColumns = @JoinColumn(name = "event_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<Event> events;
-
-
+    @JsonIgnore
+    private Set<User> users = new HashSet<>();
 }

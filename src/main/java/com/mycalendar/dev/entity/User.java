@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -45,12 +46,21 @@ public class User extends BaseEntity {
     @Column(name = "reset_password_token", length = 32767)
     private String resetPasswordToken;
 
+    // User - Group
+    @ManyToMany(mappedBy = "users")
+    private Set<Group> groups = new HashSet<>();
+
+    // User - Event
+//    @ManyToMany(mappedBy = "users")
+//    private Set<Event> events = new HashSet<>();
+
+    // User - Permission
     @ManyToMany
     @JoinTable(
             name = "user_permission",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    private Set<Permission> permissions;
+    private Set<Permission> permissions = new HashSet<>();
 
 }

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
@@ -18,4 +20,6 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
                 FROM Permission p
             """)
     Page<PermissionProjection> findAllPermission(Pageable pageable);
+
+    Optional<Permission> findByPermissionName(String permissionName);
 }

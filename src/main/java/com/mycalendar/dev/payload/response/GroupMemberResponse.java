@@ -1,10 +1,12 @@
 package com.mycalendar.dev.payload.response;
 
-import lombok.Data;
+import lombok.Builder;
 
-@Data
-public class GroupMemberResponse {
-    private Long userId;
-    private String username;
-    private String role;
+@Builder
+public record GroupMemberResponse(
+        Long userId,
+        String name,
+        String username,
+        String role
+) {
 }

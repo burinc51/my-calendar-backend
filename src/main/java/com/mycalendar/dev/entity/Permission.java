@@ -4,36 +4,27 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Set;
 
+@Entity
+@Table(name = "permissions")
 @Getter
 @Setter
-@Entity
-@Table(name = "permission")
 public class Permission {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long permissionId;
 
     @Column(nullable = false, unique = true)
-    private String permissionName;
+    private String permissionName; // e.g. ADMIN, MEMBER
 
-    // Role - User
-    @ManyToMany
-    @JoinTable(
-            name = "user_permission",
-            joinColumns = @JoinColumn(name = "permission_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> users;
+    // Permission - User
+    @ManyToMany(mappedBy = "permissions")
+    private Set<User> users = new HashSet<>();
 
-    // Role - Group
-    @ManyToMany
-    @JoinTable(
-            name = "group_permission",
-            joinColumns = @JoinColumn(name = "permission_id"),
-            inverseJoinColumns = @JoinColumn(name = "group_id")
-    )
-    private Set<Group> groups;
-
+    // Permission - Group
+    @ManyToMany(mappedBy = "permissions")
+    private Set<Group> groups = new HashSet<>();
 }
+
