@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/group")
@@ -42,5 +43,21 @@ public class GroupRestController {
     public ResponseEntity<List<GroupResponse>> getGroupsByUserId(@PathVariable Long userId) {
         List<GroupResponse> response = groupService.getGroupsByUserId(userId);
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{groupId}/members/{userId}")
+    public ResponseEntity<GroupResponse> removeMember(@PathVariable Long groupId, @PathVariable Long userId) {
+        GroupResponse response = groupService.removeMember(groupId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<Map<String, Object>> deleteGroup(@PathVariable Long groupId, @RequestParam Long requestUserId) {
+        groupService.deleteGroup(groupId, requestUserId);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Group deleted successfully",
+                "groupId", groupId
+        ));
     }
 }

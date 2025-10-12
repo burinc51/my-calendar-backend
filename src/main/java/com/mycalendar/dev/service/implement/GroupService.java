@@ -3,11 +3,12 @@ package com.mycalendar.dev.service.implement;
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.entity.Permission;
 import com.mycalendar.dev.entity.User;
+import com.mycalendar.dev.exception.ForbiddenException;
 import com.mycalendar.dev.exception.NotFoundException;
+import com.mycalendar.dev.mapper.GroupMapper;
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
-import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.repository.GroupRepository;
@@ -64,21 +65,7 @@ public class GroupService implements IGroupService {
     public PaginationResponse<GroupResponse> getAllGroup(PaginationRequest request) {
         Page<Group> pages = groupRepository.findAll(request.getPageRequest());
 
-        List<GroupResponse> groups = pages.getContent().stream().map(
-                value -> GroupResponse.builder()
-                        .groupId(value.getGroupId())
-                        .groupName(value.getGroupName())
-                        .description(value.getDescription())
-                        .members(value.getUsers().stream().map(
-                                v -> GroupMemberResponse.builder()
-                                        .userId(v.getUserId())
-                                        .name(v.getName())
-                                        .username(v.getUsername())
-                                        .role(v.getPermissions().stream().findFirst().map(Permission::getPermissionName).orElse("MEMBER"))
-                                        .build()
-                        ).toList())
-                        .build()
-        ).toList();
+        List<GroupResponse> groups = pages.getContent().stream().map(GroupMapper::mapToDto).toList();
 
         return PaginationResponse.<GroupResponse>builder()
                 .content(groups)
@@ -129,20 +116,54 @@ public class GroupService implements IGroupService {
             return List.of();
         }
 
-        return result.stream().map(
-                value -> GroupResponse.builder()
-                        .groupId(value.getGroupId())
-                        .groupName(value.getGroupName())
-                        .description(value.getDescription())
-                        .members(value.getUsers().stream().map(
-                                v -> GroupMemberResponse.builder()
-                                        .userId(v.getUserId())
-                                        .name(v.getName())
-                                        .username(v.getUsername())
-                                        .role(v.getPermissions().stream().findFirst().map(Permission::getPermissionName).orElse("MEMBER"))
-                                        .build()
-                        ).toList())
-                        .build()
-        ).toList();
+        return result.stream().map(GroupMapper::mapToDto).toList();
+    }
+
+    @Override
+    public GroupResponse removeMember(Long groupId, Long userId) {
+        // 1) Find a group
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+
+        // 2) Find a user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
+
+        // 3) Check if the user is a member of the group
+        if (!group.getUsers().contains(user)) {
+            throw new IllegalArgumentException("User is not a member of this group");
+        }
+
+        // 4) Remove relationship from both sides
+        group.getUsers().remove(user);
+        user.getGroups().remove(group);
+
+        // 5) (If there are additional business rules, e.g. remove user's permission in the group)
+        // Example: If permission = MEMBER or ADMIN and no longer used
+        user.getPermissions().removeIf(p -> p.getPermissionName().equals("MEMBER"));
+
+        // 6) save a group after removal
+        groupRepository.save(group);
+
+        // 7) return response
+        return GroupMapper.mapToDto(group);
+    }
+
+    @Transactional
+    public void deleteGroup(Long groupId, Long requestUserId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+
+        User requester = userRepository.findById(requestUserId)
+                .orElseThrow(() -> new NotFoundException("User", "id", requestUserId.toString()));
+
+        boolean isAdmin = requester.getPermissions().stream()
+                .anyMatch(p -> p.getPermissionName().equalsIgnoreCase("ADMIN"));
+
+        if (!isAdmin) {
+            throw new ForbiddenException("You do not have permission to delete this group");
+        }
+
+        groupRepository.delete(group);
     }
 }

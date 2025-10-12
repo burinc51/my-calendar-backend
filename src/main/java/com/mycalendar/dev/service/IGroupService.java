@@ -16,4 +16,8 @@ public interface IGroupService {
     void addMemberToGroup(GroupAddMemberRequest request);
 
     List<GroupResponse> getGroupsByUserId(Long userId);
+
+    GroupResponse removeMember(Long groupId, Long userId);
+
+    void deleteGroup(Long id, Long requestUserId);
 }
