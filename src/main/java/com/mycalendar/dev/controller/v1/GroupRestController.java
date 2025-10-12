@@ -1,15 +1,15 @@
 package com.mycalendar.dev.controller.v1;
 
+import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IGroupService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/group")
@@ -30,5 +30,17 @@ public class GroupRestController {
     @PostMapping("/all")
     public PaginationResponse<GroupResponse> getGroups(@RequestBody PaginationRequest request) {
         return groupService.getAllGroup(request);
+    }
+
+    @PostMapping("/add-member")
+    public ResponseEntity<String> addMemberGroup(@RequestBody GroupAddMemberRequest request) {
+        groupService.addMemberToGroup(request);
+        return ResponseEntity.ok("Member added successfully.");
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<GroupResponse>> getGroupsByUserId(@PathVariable Long userId) {
+        List<GroupResponse> response = groupService.getGroupsByUserId(userId);
+        return ResponseEntity.ok(response);
     }
 }
