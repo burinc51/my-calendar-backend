@@ -19,17 +19,42 @@ public class Event {
     private Long eventId;
 
     @Column(nullable = false)
-    private String eventTitle;
+    private String title;
 
-    private LocalDateTime eventDate;
+    @Lob
+    private String description; // โน้ต
 
-    // Event - Group (Many-to-One)
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+
+    private String location;
+    private Double latitude;
+    private Double longitude;
+
+    private LocalDateTime notificationTime; // ตั้งเวลาแจ้งเตือน
+    private String notificationType; // POPUP, EMAIL, PUSH
+    private Integer remindBeforeMinutes; // แจ้งเตือนก่อนกี่นาที
+
+    private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, CUSTOM
+    private LocalDateTime repeatUntil; // สิ้นสุดการทำซ้ำ
+
+    private String color;
+    private String category;
+    private String priority;
+
+    private Boolean pinned = false;
+
+    private String imageUrl; // เก็บ path รูป
+
+    private Long createById;
+
+    // Event belongs to Group
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
     @JsonIgnore
     private Group group;
 
-    // Event - User (Many-to-Many)
+    // Event has many Users
     @ManyToMany
     @JoinTable(
             name = "event_user",

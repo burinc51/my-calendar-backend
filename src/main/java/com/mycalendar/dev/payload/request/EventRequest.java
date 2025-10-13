@@ -7,19 +7,28 @@ import java.util.Set;
 
 @Data
 public class EventRequest {
-    private Long eventId;
-    private Long userId;
     private String title;
     private String description;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+
     private String location;
-    private boolean isPinned = false;
+    private Double latitude;
+    private Double longitude;
+
     private LocalDateTime notificationTime;
-    private String repeating;
+    private String notificationType;
+    private Integer remindBeforeMinutes;
+
+    private String repeatType;
+    private LocalDateTime repeatUntil;
+
     private String color;
     private String category;
     private String priority;
+    private Boolean pinned;
+
     private Long groupId;
+    private Long createById;
     private Set<Long> assigneeIds;
 }
