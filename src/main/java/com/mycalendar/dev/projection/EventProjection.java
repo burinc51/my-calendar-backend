@@ -5,13 +5,9 @@ import java.time.LocalDateTime;
 public interface EventProjection {
     Long getEventId();
 
-    Long getUserId();
-
     String getTitle();
 
     String getDescription();
-
-    String getImageUrl();
 
     LocalDateTime getStartDate();
 
@@ -19,11 +15,19 @@ public interface EventProjection {
 
     String getLocation();
 
-    boolean getIsPinned();
+    Double getLatitude();
+
+    Double getLongitude();
 
     LocalDateTime getNotificationTime();
 
-    String getRepeating();
+    String getNotificationType();
+
+    Integer getRemindBeforeMinutes();
+
+    String getRepeatType();
+
+    LocalDateTime getRepeatUntil();
 
     String getColor();
 
@@ -31,5 +35,17 @@ public interface EventProjection {
 
     String getPriority();
 
+    Boolean getPinned();
+
+    String getImageUrl();
+
+    Long getCreateById();
+
     Long getGroupId();
+
+    Long getUserId();
+
+    String getUsername();
+
+    String getName();
 }

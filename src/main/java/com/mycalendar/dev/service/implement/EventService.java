@@ -7,7 +7,10 @@ import com.mycalendar.dev.enums.FileType;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.mapper.EventMapper;
 import com.mycalendar.dev.payload.request.EventRequest;
+import com.mycalendar.dev.payload.request.PaginationRequest;
+import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
+import com.mycalendar.dev.projection.EventProjection;
 import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
@@ -16,6 +19,7 @@ import com.mycalendar.dev.util.FileHandler;
 import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,7 +49,7 @@ public class EventService implements IEventService {
         Group group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new NotFoundException("Group", "id", request.getGroupId().toString()));
 
-//        // 3️⃣ ตรวจสอบสิทธิ์ — เฉพาะ ADMIN เท่านั้นที่สร้าง event ได้
+//        // ตรวจสอบสิทธิ์ — เฉพาะ ADMIN เท่านั้นที่สร้าง event ได้
 //        Permission adminPermission = permissionRepository.findByPermissionName("ADMIN")
 //                .orElseThrow(() -> new NotFoundException("Permission", "name", "ADMIN"));
 //        if (!group.getUsers().contains(creator) || !creator.getPermissions().contains(adminPermission)) {
@@ -123,5 +127,22 @@ public class EventService implements IEventService {
 
         // 9) Map Response
         return EventMapper.mapToDto(saved);
+    }
+
+    @Override
+    public PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request) {
+
+        Page<EventProjection> pages = eventRepository.findAllEventSummaryByGroup(groupId, request.getPageRequest());
+
+        List<EventResponse> content = EventMapper.mapToProjection(pages.getContent());
+
+        return PaginationResponse.<EventResponse>builder()
+                .content(content)
+                .pageNo(pages.getNumber())
+                .pageSize(pages.getSize())
+                .totalElements(pages.getTotalElements())
+                .totalPages(pages.getTotalPages())
+                .last(pages.isLast())
+                .build();
     }
 }
