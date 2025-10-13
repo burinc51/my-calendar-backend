@@ -10,7 +10,7 @@ import com.mycalendar.dev.payload.request.EventRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
-import com.mycalendar.dev.projection.EventProjection;
+import com.mycalendar.dev.repository.CustomEventRepository;
 import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
@@ -35,11 +35,13 @@ public class EventService implements IEventService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
+    private final CustomEventRepository customEventRepository;
 
-    public EventService(GroupRepository groupRepository, UserRepository userRepository, EventRepository eventRepository) {
+    public EventService(GroupRepository groupRepository, UserRepository userRepository, EventRepository eventRepository, CustomEventRepository customEventRepository) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
+        this.customEventRepository = customEventRepository;
     }
 
     @Transactional
@@ -132,12 +134,10 @@ public class EventService implements IEventService {
     @Override
     public PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request) {
 
-        Page<EventProjection> pages = eventRepository.findAllEventSummaryByGroup(groupId, request.getPageRequest());
-
-        List<EventResponse> content = EventMapper.mapToProjection(pages.getContent());
+        Page<EventResponse> pages = customEventRepository.findAllEventByGroup(groupId, request.getPageRequest());
 
         return PaginationResponse.<EventResponse>builder()
-                .content(content)
+                .content(pages.getContent())
                 .pageNo(pages.getNumber())
                 .pageSize(pages.getSize())
                 .totalElements(pages.getTotalElements())
