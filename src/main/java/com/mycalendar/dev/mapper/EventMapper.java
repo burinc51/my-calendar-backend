@@ -130,6 +130,7 @@ public class EventMapper {
                             .pinned(getValue(r, 16, Boolean.class))
                             .imageUrl(getValue(r, 17, String.class))
                             .groupId(getValue(r, 18, Long.class))
+                            .createById(getValue(r, 22, Long.class))
                             .assignees(new ArrayList<>())
                             .build()
             );

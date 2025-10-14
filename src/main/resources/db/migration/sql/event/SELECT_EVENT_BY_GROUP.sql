@@ -17,10 +17,10 @@ SELECT e.event_id              AS eventId,
        e.pinned                AS pinned,
        e.image_url             AS imageUrl,
        e.group_id              AS groupId,
-
        u.user_id               AS userId,
        u.username              AS username,
-       u.name                  AS name
+       u.name                  AS name,
+       e.create_by_id          AS createById
 FROM events e
          LEFT JOIN event_user eu ON e.event_id = eu.event_id
          LEFT JOIN users u ON u.user_id = eu.user_id
