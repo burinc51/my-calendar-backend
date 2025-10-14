@@ -145,4 +145,33 @@ public class EventService implements IEventService {
                 .last(pages.isLast())
                 .build();
     }
+
+    @Override
+    public EventResponse addAssignees(Long eventId, List<Long> userIds) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
+
+        Set<User> existingUsers = event.getUsers();
+        List<User> newUsers = userRepository.findAllById(userIds);
+
+        if (newUsers.isEmpty()) {
+            throw new NotFoundException("User", "ids", userIds.toString());
+        }
+
+        existingUsers.addAll(newUsers);
+        eventRepository.save(event);
+
+        return EventMapper.mapToDto(event);
+    }
+
+    @Override
+    public EventResponse removeAssignees(Long eventId, List<Long> userIds) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
+
+        event.getUsers().removeIf(u -> userIds.contains(u.getUserId()));
+        eventRepository.save(event);
+
+        return EventMapper.mapToDto(event);
+    }
 }

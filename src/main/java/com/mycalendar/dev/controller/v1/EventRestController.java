@@ -7,8 +7,11 @@ import com.mycalendar.dev.payload.response.event.EventResponse;
 import com.mycalendar.dev.service.IEventService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/event")
@@ -28,5 +31,17 @@ public class EventRestController {
     @PostMapping("/all/{groupId}")
     public PaginationResponse<EventResponse> getAllByGroup(@RequestBody PaginationRequest request, @PathVariable Long groupId) {
         return eventService.getAllEventByGroup(groupId, request);
+    }
+
+    @PostMapping("/{eventId}/assignees")
+    public ResponseEntity<EventResponse> addAssignees(@PathVariable Long eventId, @RequestBody List<Long> userIds) {
+        EventResponse response = eventService.addAssignees(eventId, userIds);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{eventId}/assignees")
+    public ResponseEntity<EventResponse> removeAssignees(@PathVariable Long eventId, @RequestBody List<Long> userIds) {
+        EventResponse response = eventService.removeAssignees(eventId, userIds);
+        return ResponseEntity.ok(response);
     }
 }
