@@ -23,9 +23,20 @@ public class EventRestController {
         this.eventService = eventService;
     }
 
+
     @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestPart(value = "file") MultipartFile file) {
         return eventService.saveOrUpdate(eventRequest, file);
+    }
+
+    @PutMapping(path = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public EventResponse updateEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestParam(required = false) MultipartFile file) {
+        return eventService.saveOrUpdate(eventRequest, file);
+    }
+
+    @GetMapping("/{eventId}")
+    public EventResponse getEventById(@PathVariable Long eventId) {
+        return eventService.getEventById(eventId);
     }
 
     @PostMapping("/all/{groupId}")
@@ -43,5 +54,10 @@ public class EventRestController {
     public ResponseEntity<EventResponse> removeAssignees(@PathVariable Long eventId, @RequestBody List<Long> userIds) {
         EventResponse response = eventService.removeAssignees(eventId, userIds);
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{eventId}")
+    public void deleteEvent(@PathVariable Long eventId, @RequestParam Long requestUserId) {
+        eventService.deleteEvent(eventId, requestUserId);
     }
 }

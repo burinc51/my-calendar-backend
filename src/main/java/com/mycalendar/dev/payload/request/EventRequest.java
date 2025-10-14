@@ -7,6 +7,7 @@ import java.util.Set;
 
 @Data
 public class EventRequest {
+    private Long eventId;
     private String title;
     private String description;
     private LocalDateTime startDate;

@@ -18,7 +18,6 @@ import com.mycalendar.dev.service.IEventService;
 import com.mycalendar.dev.util.FileHandler;
 import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,8 +29,6 @@ import java.util.Set;
 @Service
 public class EventService implements IEventService {
 
-    @Value("${spring.application.base-url}")
-    private String baseUrl;
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
@@ -51,21 +48,14 @@ public class EventService implements IEventService {
         Group group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new NotFoundException("Group", "id", request.getGroupId().toString()));
 
-//        // ตรวจสอบสิทธิ์ — เฉพาะ ADMIN เท่านั้นที่สร้าง event ได้
-//        Permission adminPermission = permissionRepository.findByPermissionName("ADMIN")
-//                .orElseThrow(() -> new NotFoundException("Permission", "name", "ADMIN"));
-//        if (!group.getUsers().contains(creator) || !creator.getPermissions().contains(adminPermission)) {
-//            throw new ForbiddenException("Only ADMIN can create events in this group");
-//        }
-
-        // 2) Find the creator user and check if they are in the group
+        // 2) find creator
         User creator = userRepository.findById(request.getCreateById())
                 .orElseThrow(() -> new NotFoundException("User", "id", request.getCreateById().toString()));
         if (!group.getUsers().contains(creator)) {
             throw new IllegalArgumentException("Creator user is not a member of the group");
         }
 
-        // 3) Check that all assigned users are actually in the group
+        // 3) find assignees
         Set<User> participants = new HashSet<>();
         if (request.getAssigneeIds() != null && !request.getAssigneeIds().isEmpty()) {
             participants = new HashSet<>(userRepository.findAllById(request.getAssigneeIds()));
@@ -78,19 +68,37 @@ public class EventService implements IEventService {
             }
         }
 
-        // 4) Validate dates
+        // 4) validate dates
         if (request.getEndDate() != null && request.getStartDate() != null &&
                 request.getEndDate().isBefore(request.getStartDate())) {
             throw new IllegalArgumentException("End date must be after start date");
         }
 
-        // 5) Calculate notification time if not set
+        // 5) calculate notification time
         if (request.getRemindBeforeMinutes() != null && request.getNotificationTime() == null && request.getStartDate() != null) {
             request.setNotificationTime(request.getStartDate().minusMinutes(request.getRemindBeforeMinutes()));
         }
 
-        // 6) Create Event
-        Event event = new Event();
+        // ✅ 6) CREATE or UPDATE
+        Event event;
+        if (request.getEventId() != null) {
+            // --- UPDATE ---
+            event = eventRepository.findById(request.getEventId())
+                    .orElseThrow(() -> new NotFoundException("Event", "id", request.getEventId().toString()));
+
+            // ตรวจสอบว่า event อยู่ใน group เดียวกัน
+            if (!event.getGroup().getGroupId().equals(request.getGroupId())) {
+                throw new IllegalArgumentException("Cannot move event to another group");
+            }
+
+        } else {
+            // --- CREATE ---
+            event = new Event();
+            event.setGroup(group);
+            event.setCreateById(creator.getUserId());
+        }
+
+        // 7) set fields (update ทุกกรณี)
         event.setTitle(request.getTitle());
         event.setDescription(request.getDescription());
         event.setStartDate(request.getStartDate());
@@ -107,11 +115,11 @@ public class EventService implements IEventService {
         event.setCategory(request.getCategory());
         event.setPriority(request.getPriority());
         event.setPinned(request.getPinned());
-        event.setGroup(group);
-        event.setUsers(participants);
-        event.setCreateById(creator.getUserId());
+        if (request.getEventId() == null) {
+            event.setUsers(participants);
+        }
 
-        // 7) Upload image (optional)
+        // 8) handle file upload
         if (file != null && !file.isEmpty()) {
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
@@ -124,11 +132,16 @@ public class EventService implements IEventService {
             event.setImageUrl(fileUpload);
         }
 
-        // 8) Save
+        // 9) save and return
         Event saved = eventRepository.save(event);
-
-        // 9) Map Response
         return EventMapper.mapToDto(saved);
+    }
+
+    @Override
+    public EventResponse getEventById(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
+        return EventMapper.mapToDto(event);
     }
 
     @Override
@@ -173,5 +186,22 @@ public class EventService implements IEventService {
         eventRepository.save(event);
 
         return EventMapper.mapToDto(event);
+    }
+
+    @Override
+    public void deleteEvent(Long eventId, Long userId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
+
+        Group group = event.getGroup();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
+
+        if (!group.getUsers().contains(user)) {
+            throw new IllegalArgumentException("User is not a member of the group");
+        }
+
+        eventRepository.delete(event);
     }
 }

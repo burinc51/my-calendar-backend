@@ -13,9 +13,13 @@ public interface IEventService {
 
     EventResponse saveOrUpdate(EventRequest request, @Nullable MultipartFile file);
 
+    EventResponse getEventById(Long eventId);
+
     PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request);
 
     EventResponse addAssignees(Long eventId, List<Long> userIds);
 
     EventResponse removeAssignees(Long eventId, List<Long> userIds);
+
+    void deleteEvent(Long eventId, Long userId);
 }
