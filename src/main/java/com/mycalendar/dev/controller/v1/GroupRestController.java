@@ -28,6 +28,16 @@ public class GroupRestController {
         return ResponseEntity.ok("Group created successfully.");
     }
 
+    @PutMapping("/update/{groupId}")
+    public GroupResponse updateGroup(@RequestBody GroupRequest request, @PathVariable Long groupId) {
+        return groupService.update(request, groupId);
+    }
+
+    @GetMapping("/{groupId}")
+    public GroupResponse getGroupById(@PathVariable Long groupId) {
+        return groupService.getGroupById(groupId);
+    }
+
     @PostMapping("/all")
     public PaginationResponse<GroupResponse> getGroups(@RequestBody PaginationRequest request) {
         return groupService.getAllGroup(request);

@@ -62,6 +62,26 @@ public class GroupService implements IGroupService {
     }
 
     @Override
+    public GroupResponse update(GroupRequest request, Long id) {
+        Group group = groupRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Group", "groupId", id.toString()));
+
+        group.setGroupName(request.getGroupName());
+        group.setDescription(request.getDescription());
+
+        groupRepository.save(group);
+
+        return GroupMapper.mapToDto(group);
+    }
+
+    @Override
+    public GroupResponse getGroupById(Long groupId) {
+        return groupRepository.findById(groupId)
+                .map(GroupMapper::mapToDto)
+                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+    }
+
+    @Override
     public PaginationResponse<GroupResponse> getAllGroup(PaginationRequest request) {
         Page<Group> pages = groupRepository.findAll(request.getPageRequest());
 

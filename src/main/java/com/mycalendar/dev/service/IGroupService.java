@@ -11,6 +11,10 @@ import java.util.List;
 public interface IGroupService {
     void create(GroupRequest request);
 
+    GroupResponse update(GroupRequest request, Long id);
+
+    GroupResponse getGroupById(Long groupId);
+
     PaginationResponse<GroupResponse> getAllGroup(PaginationRequest request);
 
     void addMemberToGroup(GroupAddMemberRequest request);
