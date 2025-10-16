@@ -29,7 +29,7 @@ public class CustomEventRepositoryImpl implements CustomEventRepository {
     @Transactional()
     public Page<EventResponse> findAllEventByGroup(Long groupId, Pageable pageable) {
         try {
-            // โหลด SQL จากไฟล์
+            // Load SQL from file
             String baseSql = loadSqlFromFile("/db/migration/sql/event/SELECT_EVENT_BY_GROUP.sql");
             String countSql = loadSqlFromFile("/db/migration/sql/event/count/SELECT_EVENT_BY_GROUP_COUNT.sql");
 
