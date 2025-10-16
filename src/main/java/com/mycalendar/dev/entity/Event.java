@@ -22,7 +22,7 @@ public class Event {
     private String title;
 
     @Lob
-    private String description; // โน้ต
+    private String description; // Note
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;
