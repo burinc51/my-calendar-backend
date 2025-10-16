@@ -50,7 +50,7 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserGroup> userGroups = new HashSet<>();
 
-    // ✅ ความสัมพันธ์กับ Permission (global)
+    // ✅ Relationship with Permission (global)
     @ManyToMany
     @JoinTable(
             name = "user_permission",
