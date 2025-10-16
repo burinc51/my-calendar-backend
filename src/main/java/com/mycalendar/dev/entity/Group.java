@@ -22,7 +22,7 @@ public class Group {
     @Column
     private String description;
 
-    // ✅ ความสัมพันธ์กับ user (ผ่าน UserGroup)
+    // Relationship with user (via UserGroup)
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserGroup> userGroups = new HashSet<>();
 
