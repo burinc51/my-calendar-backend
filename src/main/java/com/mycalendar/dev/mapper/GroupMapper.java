@@ -48,7 +48,7 @@ public class GroupMapper {
                             .build()
             );
 
-            // เพิ่ม member เข้า group
+            // Add member to group
             response.members().add(
                     GroupMemberResponse.builder()
                             .userId(row.getUserId())
