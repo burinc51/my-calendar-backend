@@ -202,7 +202,7 @@ public class EventService implements IEventService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
 
-        if (!group.getUserGroups().contains(user)) {
+        if (group.getUserGroups().stream().noneMatch(ug -> ug.getUser().getUserId().equals(userId))) {
             throw new IllegalArgumentException("User is not a member of the group");
         }
 
