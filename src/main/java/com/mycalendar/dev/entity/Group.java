@@ -8,10 +8,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@Table(name = "groups")
 @Getter
 @Setter
-@Table(name = "groups")
-public class Group extends BaseEntity {
+public class Group {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long groupId;
@@ -22,10 +22,21 @@ public class Group extends BaseEntity {
     @Column
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "creator_id", nullable = false)
-    private User creator;
+    // Relationship with user (via UserGroup)
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserGroup> userGroups = new HashSet<>();
 
-    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
-    private Set<GroupMember> members = new HashSet<>();
+    // Group - Event (One-to-Many)
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Event> events = new HashSet<>();
+
+    // Group - Permission (Many-to-Many)
+    @ManyToMany
+    @JoinTable(
+            name = "group_permission",
+            joinColumns = @JoinColumn(name = "group_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    private Set<Permission> permissions = new HashSet<>();
+    
 }

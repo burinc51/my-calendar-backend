@@ -1,6 +1,6 @@
 package com.mycalendar.dev.service;
 
-import com.mycalendar.dev.entity.Group;
+import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupResponse;
@@ -9,17 +9,19 @@ import com.mycalendar.dev.payload.response.PaginationResponse;
 import java.util.List;
 
 public interface IGroupService {
-    Group createGroup(GroupRequest request, Long userId);
+    void create(GroupRequest request);
 
-    void addMember(Long groupId, Long memberId, Long userAdminId);
+    GroupResponse update(GroupRequest request, Long id);
 
     GroupResponse getGroupById(Long groupId);
 
-    void removeMembers(Long groupId, List<Long> memberIds);
+    PaginationResponse<GroupResponse> getAllGroup(PaginationRequest request);
 
-    void delete(Long groupId);
+    void addMemberToGroup(GroupAddMemberRequest request);
 
-    PaginationResponse getAllGroups(PaginationRequest paginationRequest);
+    List<GroupResponse> getGroupsByUserId(Long userId);
 
-    PaginationResponse getAllGroupByUser(PaginationRequest request, Long userId);
+    void removeMember(Long groupId, Long userId);
+
+    void deleteGroup(Long id, Long requestUserId);
 }

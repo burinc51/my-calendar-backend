@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -16,24 +17,24 @@ import java.util.Set;
 public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long userId;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
+    @Column(nullable = false)
+    private String password;
 
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false, unique = true)
-    private String username;
-
-    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
-    private String password;
-
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinTable(name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id")
+    @JoinTable(name = "user_role",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles;
 
@@ -44,4 +45,21 @@ public class User extends BaseEntity {
 
     @Column(name = "reset_password_token", length = 32767)
     private String resetPasswordToken;
+
+    // Relationship with Group (via UserGroup)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserGroup> userGroups = new HashSet<>();
+
+    // ✅ Relationship with Permission (global)
+    @ManyToMany
+    @JoinTable(
+            name = "user_permission",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    private Set<Permission> permissions = new HashSet<>();
+
+//    // ✅ Relationship with Event (via EventUser)
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private Set<EventUser> eventUsers = new HashSet<>();
 }

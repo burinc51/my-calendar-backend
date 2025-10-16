@@ -3,7 +3,6 @@ package com.mycalendar.dev.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -60,11 +59,14 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
+//                .authorizeHttpRequests(authorize -> authorize
+//                        .requestMatchers(PERMITTED_PATHS).permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
+//                        .requestMatchers(HttpMethod.POST, "/v1/users").permitAll()
+//                        .anyRequest().authenticated()
+//                )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(PERMITTED_PATHS).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/v1/users").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling.authenticationEntryPoint(jwtAuthenticationEntryPoint)

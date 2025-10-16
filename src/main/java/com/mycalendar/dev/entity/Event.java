@@ -1,18 +1,19 @@
 package com.mycalendar.dev.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "events")
-public class Event extends BaseEntity {
-
+@Getter
+@Setter
+public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long eventId;
@@ -21,33 +22,45 @@ public class Event extends BaseEntity {
     private String title;
 
     @Lob
-    private String description;
+    private String description; // Note
 
-    private String imageUrl;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+
     private String location;
-    @Column(nullable = false)
-    private boolean isPinned = false;
-    private LocalDateTime notificationTime;
-    private String repeating;
+    private Double latitude;
+    private Double longitude;
+
+    private LocalDateTime notificationTime; // ตั้งเวลาแจ้งเตือน
+    private String notificationType; // POPUP, EMAIL, PUSH
+    private Integer remindBeforeMinutes; // แจ้งเตือนก่อนกี่นาที
+
+    private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, CUSTOM
+    private LocalDateTime repeatUntil; // สิ้นสุดการทำซ้ำ
+
     private String color;
     private String category;
     private String priority;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    private Boolean pinned = false;
 
+    private String imageUrl; // เก็บ path รูป
+
+    private Long createById;
+
+    // Event belongs to Group
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id")
+    @JoinColumn(name = "group_id", nullable = false)
+    @JsonIgnore
     private Group group;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(name = "event_users",
-            joinColumns = @JoinColumn(name = "event_id", referencedColumnName = "eventId"),
-            inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id")
+    // Event has many Users
+    @ManyToMany
+    @JoinTable(
+            name = "event_user",
+            joinColumns = @JoinColumn(name = "event_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> users;
-
+    @JsonIgnore
+    private Set<User> users = new HashSet<>();
 }

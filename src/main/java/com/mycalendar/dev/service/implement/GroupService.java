@@ -1,222 +1,158 @@
 package com.mycalendar.dev.service.implement;
 
 import com.mycalendar.dev.entity.Group;
-import com.mycalendar.dev.entity.GroupMember;
-import com.mycalendar.dev.entity.RoleGroup;
+import com.mycalendar.dev.entity.Permission;
 import com.mycalendar.dev.entity.User;
+import com.mycalendar.dev.entity.UserGroup;
+import com.mycalendar.dev.exception.ForbiddenException;
+import com.mycalendar.dev.exception.NotFoundException;
+import com.mycalendar.dev.mapper.GroupMapper;
+import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
-import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
-import com.mycalendar.dev.repository.GroupMemberRepository;
+import com.mycalendar.dev.projection.GroupProjection;
 import com.mycalendar.dev.repository.GroupRepository;
-import com.mycalendar.dev.repository.RoleGroupRepository;
+import com.mycalendar.dev.repository.PermissionRepository;
+import com.mycalendar.dev.repository.UserGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IGroupService;
-import com.mycalendar.dev.util.EntityMapper;
-import com.mycalendar.dev.util.GenericSpecification;
-import com.mycalendar.dev.util.SecurityUtil;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class GroupService implements IGroupService {
-    private final GroupRepository groupRepository;
-    private final GroupMemberRepository groupMemberRepository;
-    private final UserRepository userRepository;
-    private final RoleGroupRepository roleGroupRepository;
 
-    public GroupService(GroupRepository groupRepository, GroupMemberRepository groupMemberRepository, UserRepository userRepository, RoleGroupRepository roleGroupRepository) {
-        this.groupRepository = groupRepository;
-        this.groupMemberRepository = groupMemberRepository;
+    private final UserRepository userRepository;
+    private final PermissionRepository permissionRepository;
+    private final GroupRepository groupRepository;
+    private final UserGroupRepository userGroupRepository;
+
+    public GroupService(UserRepository userRepository, PermissionRepository permissionRepository, GroupRepository groupRepository, UserGroupRepository userGroupRepository) {
         this.userRepository = userRepository;
-        this.roleGroupRepository = roleGroupRepository;
+        this.permissionRepository = permissionRepository;
+        this.groupRepository = groupRepository;
+        this.userGroupRepository = userGroupRepository;
     }
 
     @Transactional
-    public Group createGroup(GroupRequest request, Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        RoleGroup roleGroup = roleGroupRepository.findByName("ADMIN").orElseThrow(() -> new RuntimeException("Role not found"));
+    public void create(GroupRequest request) {
+        User creator = userRepository.findById(request.getCreatorUserId())
+                .orElseThrow(() -> new NotFoundException("User", "id", request.getCreatorUserId().toString()));
 
         Group group = new Group();
         group.setGroupName(request.getGroupName());
         group.setDescription(request.getDescription());
-        group.setCreator(user);
+
         groupRepository.save(group);
 
-        GroupMember groupMember = new GroupMember();
-        groupMember.setGroup(group);
-        groupMember.setUser(user);
-        groupMember.setRoleGroup(roleGroup);
-        groupMemberRepository.save(groupMember);
+        Permission adminPermission = permissionRepository.findByPermissionName("ADMIN")
+                .orElseThrow(() -> new NotFoundException("Permission", "name", "ADMIN"));
 
-        return group;
+        UserGroup userGroup = new UserGroup();
+        userGroup.setUser(creator);
+        userGroup.setGroup(group);
+        userGroup.setPermission(adminPermission);
+        userGroupRepository.save(userGroup);
     }
 
+    @Override
+    public GroupResponse update(GroupRequest request, Long id) {
+        Group group = groupRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Group", "groupId", id.toString()));
 
-    @Transactional
-    public void addMember(Long groupId, Long memberId, Long userAdminId) {
-        User currentUser = userRepository.findById(userAdminId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
-        User member = userRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+        group.setGroupName(request.getGroupName());
+        group.setDescription(request.getDescription());
 
-        boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
-                .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
-                .orElse(false);
-        if (!isGroupAdmin) {
-            throw new RuntimeException("Only group admins can add members");
-        }
+        groupRepository.save(group);
 
-        boolean isAlreadyMember = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, member.getId())
-                .isPresent();
-        if (isAlreadyMember) {
-            throw new RuntimeException("User is already a member of the group");
-        }
-
-        RoleGroup roleGroup = roleGroupRepository.findByName("MEMBER").orElseThrow(() -> new RuntimeException("Role not found"));
-
-        GroupMember groupMember = new GroupMember();
-        groupMember.setGroup(group);
-        groupMember.setUser(member);
-        groupMember.setRoleGroup(roleGroup);
-        groupMemberRepository.save(groupMember);
+        return GroupMapper.mapToDto(group);
     }
 
     @Override
     public GroupResponse getGroupById(Long groupId) {
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+        return groupRepository.findById(groupId)
+                .map(GroupMapper::mapToDto)
+                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+    }
 
-        GroupResponse response = EntityMapper.mapToEntity(group, GroupResponse.class);
+    @Override
+    public PaginationResponse<GroupResponse> getAllGroup(PaginationRequest request) {
+        Page<Group> pages = groupRepository.findAll(request.getPageRequest());
 
-        List<GroupMemberResponse> memberResponses = groupMemberRepository.findByGroupGroupId(groupId)
-                .stream()
-                .map(gm -> {
-                    GroupMemberResponse dto = new GroupMemberResponse();
-                    dto.setUserId(gm.getUser().getId());
-                    dto.setUsername(gm.getUser().getUsername());
-                    dto.setRole(gm.getRoleGroup().getName());
-                    return dto;
-                })
-                .toList();
+        List<GroupResponse> groups = pages.getContent().stream().map(GroupMapper::mapToDto).toList();
 
-        response.setCreatorId(group.getCreator().getId());
-        response.setMembers(memberResponses);
+        return PaginationResponse.<GroupResponse>builder()
+                .content(groups)
+                .pageNo(request.getPageNumber())
+                .pageSize(pages.getSize())
+                .totalElements(pages.getTotalElements())
+                .totalPages(pages.getTotalPages())
+                .last(pages.isLast())
+                .build();
+    }
 
-        return response;
+    @Override
+    public void addMemberToGroup(GroupAddMemberRequest request) {
+        Group group = groupRepository.findById(request.getGroupId())
+                .orElseThrow(() -> new NotFoundException("Group", "id", request.getGroupId().toString()));
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new NotFoundException("User", "id", request.getUserId().toString()));
+
+        Permission permission = permissionRepository.findById(request.getPermissionId())
+                .orElseThrow(() -> new NotFoundException("Permission", "id", request.getPermissionId().toString()));
+
+        boolean exists = userGroupRepository.existsByUserUserIdAndGroupGroupId(user.getUserId(), group.getGroupId());
+        if (exists) {
+            throw new IllegalArgumentException("User is already in this group");
+        }
+
+        UserGroup userGroup = new UserGroup();
+        userGroup.setUser(user);
+        userGroup.setGroup(group);
+        userGroup.setPermission(permission);
+
+        userGroupRepository.save(userGroup);
     }
 
     @Transactional
-    public void removeMembers(Long groupId, List<Long> memberIds) {
-        Long userAdminId = SecurityUtil.getCurrentUserId();
-        if (userAdminId == null) {
-            throw new RuntimeException("User not logged in");
-        }
-        User currentUser = userRepository.findById(userAdminId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
-                .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
-                .orElse(false);
-        if (!isGroupAdmin) {
-            throw new RuntimeException("Only group admins can remove members");
-        }
-
-        for (Long memberId : memberIds) {
-            User member = userRepository.findById(memberId)
-                    .orElseThrow(() -> new RuntimeException("Member not found"));
-
-            GroupMember groupMember = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, member.getId())
-                    .orElseThrow(() -> new RuntimeException("User is not a member of the group"));
-
-            groupMemberRepository.delete(groupMember);
-        }
+    public List<GroupResponse> getGroupsByUserId(Long userId) {
+        List<GroupProjection> projections = groupRepository.findAllGroupsByUserId(userId);
+        return GroupMapper.mapToDto(projections);
     }
 
     @Override
-    public void delete(Long groupId) {
-        Long userAdminId = SecurityUtil.getCurrentUserId();
-        if (userAdminId == null) {
-            throw new RuntimeException("User not logged in");
-        }
-        User currentUser = userRepository.findById(userAdminId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public void removeMember(Long groupId, Long userId) {
+        UserGroup userGroup = userGroupRepository.findByUserUserIdAndGroupGroupId(userId, groupId)
+                .orElseThrow(() -> new NotFoundException("UserGroup", "user/group", userId + "/" + groupId));
+
+        userGroupRepository.delete(userGroup);
+    }
+
+    @Transactional
+    public void deleteGroup(Long groupId, Long requestUserId) {
         Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
-        boolean isGroupAdmin = groupMemberRepository.findByGroupGroupIdAndUserId(groupId, currentUser.getId())
-                .map(gm -> "ADMIN".equals(gm.getRoleGroup().getName()))
-                .orElse(false);
-        if (!isGroupAdmin) {
-            throw new RuntimeException("Only group admins can delete groups");
+                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+
+        userRepository.findById(requestUserId)
+                .orElseThrow(() -> new NotFoundException("User", "id", requestUserId.toString()));
+
+        boolean isAdmin = group.getUserGroups().stream()
+                .anyMatch(ug ->
+                        ug.getUser().getUserId().equals(requestUserId)
+                                && ug.getPermission().getPermissionName().equalsIgnoreCase("ADMIN")
+                );
+
+        if (!isAdmin) {
+            throw new ForbiddenException("You do not have permission to delete this group");
         }
-        groupMemberRepository.deleteAll(groupMemberRepository.findByGroupGroupId(groupId));
+
         groupRepository.delete(group);
     }
 
-    @Override
-    public PaginationResponse getAllGroups(PaginationRequest request) {
-        Map<String, Object> keywordMap = request.getFilter();
-        List<String> fields = new ArrayList<>(keywordMap.keySet());
-        Specification<Group> spec = new GenericSpecification<Group>().getSpecification(keywordMap, fields);
-
-        Page<Group> pages = groupRepository.findAll(spec, request.getPageRequest());
-
-        List<GroupResponse> content = pages.stream()
-                .map(group -> {
-                    GroupResponse response = EntityMapper.mapToEntity(group, GroupResponse.class);
-                    response.setCreatorId(group.getCreator().getId());
-                    List<GroupMemberResponse> memberResponses = groupMemberRepository.findByGroupGroupId(group.getGroupId())
-                            .stream()
-                            .map(gm -> {
-                                GroupMemberResponse dto = new GroupMemberResponse();
-                                dto.setUserId(gm.getUser().getId());
-                                dto.setUsername(gm.getUser().getUsername());
-                                dto.setRole(gm.getRoleGroup().getName());
-                                return dto;
-                            })
-                            .toList();
-                    response.setMembers(memberResponses);
-                    return response;
-                })
-                .toList();
-
-        return new PaginationResponse(content, request.getPageNumber(), request.getPageSize(), pages.getTotalElements(), pages.getTotalPages(), pages.isLast());
-    }
-
-
-    @Override
-    public PaginationResponse getAllGroupByUser(PaginationRequest request, Long userId) {
-        Page<Group> pages = groupRepository.findAllByMemberUserId(userId, request.getPageRequest());
-
-        List<GroupResponse> content = pages.stream()
-                .map(group -> {
-                    GroupResponse response = EntityMapper.mapToEntity(group, GroupResponse.class);
-                    response.setCreatorId(group.getCreator().getId());
-                    List<GroupMemberResponse> memberResponses = groupMemberRepository.findByGroupGroupId(group.getGroupId())
-                            .stream()
-                            .map(gm -> {
-                                GroupMemberResponse dto = new GroupMemberResponse();
-                                dto.setUserId(gm.getUser().getId());
-                                dto.setUsername(gm.getUser().getUsername());
-                                dto.setRole(gm.getRoleGroup().getName());
-                                return dto;
-                            })
-                            .toList();
-                    response.setMembers(memberResponses);
-                    return response;
-                })
-                .toList();
-        return new PaginationResponse(content, request.getPageNumber(), request.getPageSize(), pages.getTotalElements(), pages.getTotalPages(), pages.isLast());
-    }
 }

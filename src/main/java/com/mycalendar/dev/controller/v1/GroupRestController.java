@@ -1,23 +1,21 @@
 package com.mycalendar.dev.controller.v1;
 
-import com.mycalendar.dev.entity.Group;
-import com.mycalendar.dev.payload.request.AddMemberRequest;
+import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
-import com.mycalendar.dev.payload.request.RemoveMembersRequest;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IGroupService;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/group")
+@RequestMapping("/api/v1/group")
 public class GroupRestController {
 
-    // TODO: update group, fix response get by Id
     private final IGroupService groupService;
 
     public GroupRestController(IGroupService groupService) {
@@ -25,43 +23,51 @@ public class GroupRestController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Group> create(@Valid @RequestBody GroupRequest groupRequest) {
-        Group group = groupService.createGroup(groupRequest, groupRequest.getUserId());
-        return new ResponseEntity<>(group, HttpStatus.CREATED);
+    public ResponseEntity<String> createGroup(@RequestBody GroupRequest request) {
+        groupService.create(request);
+        return ResponseEntity.ok("Group created successfully.");
     }
 
-    @PostMapping("/{groupId}/members")
-    public ResponseEntity<String> addMember(@PathVariable Long groupId, @RequestBody AddMemberRequest requestAddMemberRequest) {
-        groupService.addMember(groupId, requestAddMemberRequest.getMemberId(), requestAddMemberRequest.getUserAdminId());
-        return ResponseEntity.ok("Member added successfully.");
+    @PutMapping("/update/{groupId}")
+    public GroupResponse updateGroup(@RequestBody GroupRequest request, @PathVariable Long groupId) {
+        return groupService.update(request, groupId);
     }
 
-    @GetMapping("/{id}")
-    public GroupResponse getById(@PathVariable Long id) {
-        return groupService.getGroupById(id);
-    }
-
-    @DeleteMapping("/{groupId}/members")
-    public ResponseEntity<String> removeMembers(
-            @PathVariable Long groupId,
-            @RequestBody RemoveMembersRequest request) {
-        groupService.removeMembers(groupId, request.getMemberIds());
-        return ResponseEntity.ok("Members removed successfully.");
-    }
-
-    @DeleteMapping("")
-    public ResponseEntity<String> delete(@RequestParam Long groupId) {
-        groupService.delete(groupId);
-        return ResponseEntity.ok("Group deleted successfully.");
+    @GetMapping("/{groupId}")
+    public GroupResponse getGroupById(@PathVariable Long groupId) {
+        return groupService.getGroupById(groupId);
     }
 
     @PostMapping("/all")
-    public PaginationResponse getAllGroups(@RequestBody PaginationRequest paginationRequest) {
-        return groupService.getAllGroups(paginationRequest);
+    public PaginationResponse<GroupResponse> getGroups(@RequestBody PaginationRequest request) {
+        return groupService.getAllGroup(request);
     }
 
-    @PostMapping("/all/{userId}")
-    public PaginationResponse getAllGroupByUser(@PathVariable Long userId, @RequestBody PaginationRequest paginationRequest) {
-        return groupService.getAllGroupByUser(paginationRequest, userId);
+    @PostMapping("/add-member")
+    public ResponseEntity<String> addMemberGroup(@RequestBody GroupAddMemberRequest request) {
+        groupService.addMemberToGroup(request);
+        return ResponseEntity.ok("Member added successfully.");
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<GroupResponse>> getGroupsByUserId(@PathVariable Long userId) {
+        List<GroupResponse> response = groupService.getGroupsByUserId(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{groupId}/members/{userId}")
+    public ResponseEntity<Void> removeMember(@PathVariable Long groupId, @PathVariable Long userId) {
+        groupService.removeMember(groupId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<Map<String, Object>> deleteGroup(@PathVariable Long groupId, @RequestParam Long requestUserId) {
+        groupService.deleteGroup(groupId, requestUserId);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Group deleted successfully",
+                "groupId", groupId
+        ));
     }
 }
