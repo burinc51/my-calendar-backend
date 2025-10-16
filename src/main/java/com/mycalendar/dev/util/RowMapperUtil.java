@@ -56,7 +56,7 @@ public class RowMapperUtil {
 
             return null; // ไม่รู้จัก type → คืน null
         } catch (Exception e) {
-            return null; // ถ้าเจอ error ตอน cast/parse → คืน null
+            return null; // If an error occurs during cast/parse → return null
         }
     }
 
