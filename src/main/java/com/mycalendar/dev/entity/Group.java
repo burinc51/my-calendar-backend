@@ -22,14 +22,9 @@ public class Group {
     @Column
     private String description;
 
-    // Group - User (Many-to-Many)
-    @ManyToMany
-    @JoinTable(
-            name = "user_group",
-            joinColumns = @JoinColumn(name = "group_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> users = new HashSet<>();
+    // ✅ ความสัมพันธ์กับ user (ผ่าน UserGroup)
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserGroup> userGroups = new HashSet<>();
 
     // Group - Event (One-to-Many)
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -43,4 +38,5 @@ public class Group {
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     private Set<Permission> permissions = new HashSet<>();
+    
 }

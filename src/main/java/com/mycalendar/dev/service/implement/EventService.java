@@ -51,7 +51,10 @@ public class EventService implements IEventService {
         // 2) find creator
         User creator = userRepository.findById(request.getCreateById())
                 .orElseThrow(() -> new NotFoundException("User", "id", request.getCreateById().toString()));
-        if (!group.getUsers().contains(creator)) {
+
+        boolean isMember = group.getUserGroups().stream()
+                .anyMatch(ug -> ug.getUser().getUserId().equals(creator.getUserId()));
+        if (!isMember) {
             throw new IllegalArgumentException("Creator user is not a member of the group");
         }
 
@@ -60,8 +63,9 @@ public class EventService implements IEventService {
         if (request.getAssigneeIds() != null && !request.getAssigneeIds().isEmpty()) {
             participants = new HashSet<>(userRepository.findAllById(request.getAssigneeIds()));
             List<Long> invalidIds = participants.stream()
-                    .filter(u -> !group.getUsers().contains(u))
                     .map(User::getUserId)
+                    .filter(userId -> group.getUserGroups().stream()
+                            .noneMatch(ug -> ug.getUser().getUserId().equals(userId)))
                     .toList();
             if (!invalidIds.isEmpty()) {
                 throw new IllegalArgumentException("Users with IDs " + invalidIds + " are not in the group");
@@ -151,7 +155,7 @@ public class EventService implements IEventService {
 
         return PaginationResponse.<EventResponse>builder()
                 .content(pages.getContent())
-                .pageNo(pages.getNumber())
+                .pageNo(request.getPageNumber())
                 .pageSize(pages.getSize())
                 .totalElements(pages.getTotalElements())
                 .totalPages(pages.getTotalPages())
@@ -198,7 +202,7 @@ public class EventService implements IEventService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
 
-        if (!group.getUsers().contains(user)) {
+        if (!group.getUserGroups().contains(user)) {
             throw new IllegalArgumentException("User is not a member of the group");
         }
 

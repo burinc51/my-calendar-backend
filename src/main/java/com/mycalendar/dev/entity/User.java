@@ -46,15 +46,11 @@ public class User extends BaseEntity {
     @Column(name = "reset_password_token", length = 32767)
     private String resetPasswordToken;
 
-    // User - Group
-    @ManyToMany(mappedBy = "users")
-    private Set<Group> groups = new HashSet<>();
+    // ✅ ความสัมพันธ์กับ Group (ผ่าน UserGroup)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserGroup> userGroups = new HashSet<>();
 
-    // User - Event
-//    @ManyToMany(mappedBy = "users")
-//    private Set<Event> events = new HashSet<>();
-
-    // User - Permission
+    // ✅ ความสัมพันธ์กับ Permission (global)
     @ManyToMany
     @JoinTable(
             name = "user_permission",
@@ -63,4 +59,7 @@ public class User extends BaseEntity {
     )
     private Set<Permission> permissions = new HashSet<>();
 
+//    // ✅ ความสัมพันธ์กับ Event (ผ่าน EventUser)
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private Set<EventUser> eventUsers = new HashSet<>();
 }

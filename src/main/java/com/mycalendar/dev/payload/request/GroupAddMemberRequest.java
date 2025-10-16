@@ -6,5 +6,5 @@ import lombok.Data;
 public class GroupAddMemberRequest {
     private Long groupId;
     private Long userId;
-    private String role; // ADMIN, MEMBER
+    private Long permissionId; // ADMIN, MEMBER
 }

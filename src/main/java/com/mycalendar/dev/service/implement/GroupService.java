@@ -3,6 +3,7 @@ package com.mycalendar.dev.service.implement;
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.entity.Permission;
 import com.mycalendar.dev.entity.User;
+import com.mycalendar.dev.entity.UserGroup;
 import com.mycalendar.dev.exception.ForbiddenException;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.mapper.GroupMapper;
@@ -11,8 +12,10 @@ import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
+import com.mycalendar.dev.projection.GroupProjection;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.PermissionRepository;
+import com.mycalendar.dev.repository.UserGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IGroupService;
 import jakarta.transaction.Transactional;
@@ -27,38 +30,34 @@ public class GroupService implements IGroupService {
     private final UserRepository userRepository;
     private final PermissionRepository permissionRepository;
     private final GroupRepository groupRepository;
+    private final UserGroupRepository userGroupRepository;
 
-    public GroupService(UserRepository userRepository, PermissionRepository permissionRepository, GroupRepository groupRepository) {
+    public GroupService(UserRepository userRepository, PermissionRepository permissionRepository, GroupRepository groupRepository, UserGroupRepository userGroupRepository) {
         this.userRepository = userRepository;
         this.permissionRepository = permissionRepository;
         this.groupRepository = groupRepository;
+        this.userGroupRepository = userGroupRepository;
     }
 
     @Transactional
     public void create(GroupRequest request) {
-        // 1) find user creator
         User creator = userRepository.findById(request.getCreatorUserId())
                 .orElseThrow(() -> new NotFoundException("User", "id", request.getCreatorUserId().toString()));
 
-        // 2) find permission ADMIN
-        Permission adminPermission = permissionRepository.findByPermissionName("ADMIN")
-                .orElseThrow(() -> new NotFoundException("Permission", "name", "ADMIN"));
-
-        // 3) create a new group
         Group group = new Group();
         group.setGroupName(request.getGroupName());
         group.setDescription(request.getDescription());
 
-        // 4) Associate Group ↔ User relationship
-        group.getUsers().add(creator);
-        creator.getGroups().add(group); // ✅ sync both sides
-
-        // 5) Associate User ↔ Permission
-        creator.getPermissions().add(adminPermission);
-        adminPermission.getUsers().add(creator);
-
-        // 6) save a group (cascade will help save other relationships)
         groupRepository.save(group);
+
+        Permission adminPermission = permissionRepository.findByPermissionName("ADMIN")
+                .orElseThrow(() -> new NotFoundException("Permission", "name", "ADMIN"));
+
+        UserGroup userGroup = new UserGroup();
+        userGroup.setUser(creator);
+        userGroup.setGroup(group);
+        userGroup.setPermission(adminPermission);
+        userGroupRepository.save(userGroup);
     }
 
     @Override
@@ -89,7 +88,7 @@ public class GroupService implements IGroupService {
 
         return PaginationResponse.<GroupResponse>builder()
                 .content(groups)
-                .pageNo(pages.getNumber())
+                .pageNo(request.getPageNumber())
                 .pageSize(pages.getSize())
                 .totalElements(pages.getTotalElements())
                 .totalPages(pages.getTotalPages())
@@ -99,74 +98,40 @@ public class GroupService implements IGroupService {
 
     @Override
     public void addMemberToGroup(GroupAddMemberRequest request) {
-        // 1) find a group
         Group group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new NotFoundException("Group", "id", request.getGroupId().toString()));
 
-        // 2) find a user
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new NotFoundException("User", "id", request.getUserId().toString()));
 
-        // 3) Check if the user is already in the group
-        if (group.getUsers().contains(user)) {
-            throw new IllegalArgumentException("User is already a member of this group");
+        Permission permission = permissionRepository.findById(request.getPermissionId())
+                .orElseThrow(() -> new NotFoundException("Permission", "id", request.getPermissionId().toString()));
+
+        boolean exists = userGroupRepository.existsByUserUserIdAndGroupGroupId(user.getUserId(), group.getGroupId());
+        if (exists) {
+            throw new IllegalArgumentException("User is already in this group");
         }
 
-        // 4) Associate Group ↔ User relationship
-        group.getUsers().add(user);
-        user.getGroups().add(group);
+        UserGroup userGroup = new UserGroup();
+        userGroup.setUser(user);
+        userGroup.setGroup(group);
+        userGroup.setPermission(permission);
 
-        // 5) Add permission (Permission)
-        String roleName = request.getRole() != null ? request.getRole() : "MEMBER";
-        Permission permission = permissionRepository.findByPermissionName(roleName)
-                .orElseThrow(() -> new NotFoundException("Permission", "name", roleName));
-
-        user.getPermissions().add(permission);
-        permission.getUsers().add(user);
-
-        // 6) Save group
-        groupRepository.save(group);
+        userGroupRepository.save(userGroup);
     }
 
-    @Override
+    @Transactional
     public List<GroupResponse> getGroupsByUserId(Long userId) {
-        List<Group> result = groupRepository.findAllByUserId(userId);
-
-        if (result == null) {
-            return List.of();
-        }
-
-        return result.stream().map(GroupMapper::mapToDto).toList();
+        List<GroupProjection> projections = groupRepository.findAllGroupsByUserId(userId);
+        return GroupMapper.mapToDto(projections);
     }
 
     @Override
-    public GroupResponse removeMember(Long groupId, Long userId) {
-        // 1) Find a group
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+    public void removeMember(Long groupId, Long userId) {
+        UserGroup userGroup = userGroupRepository.findByUserUserIdAndGroupGroupId(userId, groupId)
+                .orElseThrow(() -> new NotFoundException("UserGroup", "user/group", userId + "/" + groupId));
 
-        // 2) Find a user
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
-
-        // 3) Check if the user is a member of the group
-        if (!group.getUsers().contains(user)) {
-            throw new IllegalArgumentException("User is not a member of this group");
-        }
-
-        // 4) Remove relationship from both sides
-        group.getUsers().remove(user);
-        user.getGroups().remove(group);
-
-        // 5) (If there are additional business rules, e.g. remove user's permission in the group)
-        // Example: If permission = MEMBER or ADMIN and no longer used
-        user.getPermissions().removeIf(p -> p.getPermissionName().equals("MEMBER"));
-
-        // 6) save a group after removal
-        groupRepository.save(group);
-
-        // 7) return response
-        return GroupMapper.mapToDto(group);
+        userGroupRepository.delete(userGroup);
     }
 
     @Transactional
@@ -174,11 +139,14 @@ public class GroupService implements IGroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
 
-        User requester = userRepository.findById(requestUserId)
+        userRepository.findById(requestUserId)
                 .orElseThrow(() -> new NotFoundException("User", "id", requestUserId.toString()));
 
-        boolean isAdmin = requester.getPermissions().stream()
-                .anyMatch(p -> p.getPermissionName().equalsIgnoreCase("ADMIN"));
+        boolean isAdmin = group.getUserGroups().stream()
+                .anyMatch(ug ->
+                        ug.getUser().getUserId().equals(requestUserId)
+                                && ug.getPermission().getPermissionName().equalsIgnoreCase("ADMIN")
+                );
 
         if (!isAdmin) {
             throw new ForbiddenException("You do not have permission to delete this group");
@@ -186,4 +154,5 @@ public class GroupService implements IGroupService {
 
         groupRepository.delete(group);
     }
+
 }

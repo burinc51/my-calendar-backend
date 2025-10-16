@@ -56,9 +56,9 @@ public class GroupRestController {
     }
 
     @DeleteMapping("/{groupId}/members/{userId}")
-    public ResponseEntity<GroupResponse> removeMember(@PathVariable Long groupId, @PathVariable Long userId) {
-        GroupResponse response = groupService.removeMember(groupId, userId);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Void> removeMember(@PathVariable Long groupId, @PathVariable Long userId) {
+        groupService.removeMember(groupId, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{groupId}")
