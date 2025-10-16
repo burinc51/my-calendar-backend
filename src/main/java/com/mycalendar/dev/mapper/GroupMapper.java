@@ -38,7 +38,7 @@ public class GroupMapper {
         for (GroupProjection row : projections) {
             Long groupId = row.getGroupId();
 
-            // ถ้ายังไม่มี group นี้ → สร้างใหม่
+            // If this group does not exist yet → create a new one
             GroupResponse response = grouped.computeIfAbsent(groupId, id ->
                     GroupResponse.builder()
                             .groupId(row.getGroupId())
