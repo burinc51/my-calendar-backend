@@ -90,7 +90,7 @@ public class EventService implements IEventService {
             event = eventRepository.findById(request.getEventId())
                     .orElseThrow(() -> new NotFoundException("Event", "id", request.getEventId().toString()));
 
-            // ตรวจสอบว่า event อยู่ใน group เดียวกัน
+            // Check that the event is in the same group
             if (!event.getGroup().getGroupId().equals(request.getGroupId())) {
                 throw new IllegalArgumentException("Cannot move event to another group");
             }
