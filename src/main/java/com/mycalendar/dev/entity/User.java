@@ -46,7 +46,7 @@ public class User extends BaseEntity {
     @Column(name = "reset_password_token", length = 32767)
     private String resetPasswordToken;
 
-    // ✅ ความสัมพันธ์กับ Group (ผ่าน UserGroup)
+    // Relationship with Group (via UserGroup)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserGroup> userGroups = new HashSet<>();
 
