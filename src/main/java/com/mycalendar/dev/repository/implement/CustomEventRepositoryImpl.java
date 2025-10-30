@@ -29,27 +29,29 @@ public class CustomEventRepositoryImpl implements CustomEventRepository {
     @Transactional()
     public Page<EventResponse> findAllEventByGroup(Long groupId, Pageable pageable) {
         try {
-            // Load SQL from file
+            // โหลด SQL โดยไม่มี LIMIT/OFFSET
             String baseSql = loadSqlFromFile("/db/migration/sql/event/SELECT_EVENT_BY_GROUP.sql");
             String countSql = loadSqlFromFile("/db/migration/sql/event/count/SELECT_EVENT_BY_GROUP_COUNT.sql");
 
-            // Query หลัก (data)
+            // Query หลัก (ไม่ต้องใช้ pagination)
             Query query = entityManager.createNativeQuery(baseSql);
             query.setParameter("groupId", groupId);
-            query.setFirstResult((int) pageable.getOffset());
-            query.setMaxResults(pageable.getPageSize());
 
-            // Query นับจำนวนทั้งหมด
+            // Query นับจำนวน
             Query countQuery = entityManager.createNativeQuery(countSql);
             countQuery.setParameter("groupId", groupId);
 
             List<Object[]> rows = query.getResultList();
             List<EventResponse> responses = EventMapper.mapRowsMerged(rows);
 
+            // ใช้ pagination หลังจาก mapping เสร็จแล้ว
+            int start = (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), responses.size());
+            List<EventResponse> pageContent = responses.subList(start, end);
 
             long total = ((Number) countQuery.getSingleResult()).longValue();
 
-            return new PageImpl<>(responses, pageable, total);
+            return new PageImpl<>(pageContent, pageable, total);
         } catch (IOException e) {
             throw new RuntimeException("Cannot load SQL file", e);
         }

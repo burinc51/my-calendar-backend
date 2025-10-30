@@ -3,6 +3,8 @@ package com.mycalendar.dev.mapper;
 import com.mycalendar.dev.entity.Event;
 import com.mycalendar.dev.payload.response.event.EventResponse;
 import com.mycalendar.dev.payload.response.event.EventUserResponse;
+import com.mycalendar.dev.projection.EventProjection;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -98,6 +100,56 @@ public class EventMapper {
                 }
             }
         }
+        return new ArrayList<>(map.values());
+    }
+
+    public static List<EventResponse> mapRowsFromProjection(Page<EventProjection> page) {
+        return mapRowsMergedFromProjection(page.getContent());
+    }
+
+    public static List<EventResponse> mapRowsMergedFromProjection(List<EventProjection> rows) {
+        Map<Long, EventResponse> map = new LinkedHashMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
+        for (EventProjection r : rows) {
+            Long eventId = r.getEventId();
+            EventResponse e = map.computeIfAbsent(eventId, id ->
+                    EventResponse.builder()
+                            .eventId(r.getEventId())
+                            .title(r.getTitle())
+                            .description(r.getDescription())
+                            .startDate(Optional.ofNullable(r.getStartDate()).map(d -> d.format(fmt)).orElse(null))
+                            .endDate(Optional.ofNullable(r.getEndDate()).map(d -> d.format(fmt)).orElse(null))
+                            .location(r.getLocation())
+                            .latitude(r.getLatitude())
+                            .longitude(r.getLongitude())
+                            .notificationTime(Optional.ofNullable(r.getNotificationTime()).map(d -> d.format(fmt)).orElse(null))
+                            .notificationType(r.getNotificationType())
+                            .remindBeforeMinutes(r.getRemindBeforeMinutes())
+                            .repeatType(r.getRepeatType())
+                            .repeatUntil(Optional.ofNullable(r.getRepeatUntil()).map(d -> d.format(fmt)).orElse(null))
+                            .color(r.getColor())
+                            .category(r.getCategory())
+                            .priority(r.getPriority())
+                            .pinned(r.getPinned())
+                            .imageUrl(r.getImageUrl())
+                            .groupId(r.getGroupId())
+                            .createById(r.getCreateById())
+                            .assignees(new ArrayList<>())
+                            .build()
+            );
+
+            if (r.getUserId() != null) {
+                if (e.assignees().stream().noneMatch(a -> a.userId().equals(r.getUserId()))) {
+                    e.assignees().add(new EventUserResponse(
+                            r.getUserId(),
+                            r.getUsername(),
+                            r.getName()
+                    ));
+                }
+            }
+        }
+
         return new ArrayList<>(map.values());
     }
 

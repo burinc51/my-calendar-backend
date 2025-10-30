@@ -10,6 +10,7 @@ import com.mycalendar.dev.payload.request.EventRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
+import com.mycalendar.dev.projection.EventProjection;
 import com.mycalendar.dev.repository.CustomEventRepository;
 import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.GroupRepository;
@@ -19,6 +20,7 @@ import com.mycalendar.dev.util.FileHandler;
 import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -149,7 +151,7 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request) {
+    public PaginationResponse<EventResponse> getAllEventByGroup1(Long groupId, PaginationRequest request) {
 
         Page<EventResponse> pages = customEventRepository.findAllEventByGroup(groupId, request.getPageRequest());
 
@@ -207,5 +209,23 @@ public class EventService implements IEventService {
         }
 
         eventRepository.delete(event);
+    }
+
+    @Override
+    public PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request) {
+        Pageable pageable = request.getPageRequest();
+        Page<EventProjection> pages = eventRepository.findAllByGroupId(groupId, pageable);
+        long totalElements = eventRepository.countEventsByGroupId(groupId);
+
+        List<EventResponse> content = EventMapper.mapRowsMergedFromProjection(pages.getContent());
+
+        return PaginationResponse.<EventResponse>builder()
+                .content(content)
+                .pageNo(request.getPageNumber())
+                .pageSize(pages.getSize())
+                .totalElements(totalElements)
+                .totalPages(pages.getTotalPages())
+                .last(pages.isLast())
+                .build();
     }
 }

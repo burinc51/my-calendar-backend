@@ -39,11 +39,6 @@ public class EventRestController {
         return eventService.getEventById(eventId);
     }
 
-    @PostMapping("/all/{groupId}")
-    public PaginationResponse<EventResponse> getAllByGroup(@RequestBody PaginationRequest request, @PathVariable Long groupId) {
-        return eventService.getAllEventByGroup(groupId, request);
-    }
-
     @PostMapping("/{eventId}/assignees")
     public ResponseEntity<EventResponse> addAssignees(@PathVariable Long eventId, @RequestBody List<Long> userIds) {
         EventResponse response = eventService.addAssignees(eventId, userIds);
@@ -59,5 +54,10 @@ public class EventRestController {
     @DeleteMapping("/{eventId}")
     public void deleteEvent(@PathVariable Long eventId, @RequestParam Long requestUserId) {
         eventService.deleteEvent(eventId, requestUserId);
+    }
+
+    @PostMapping("/all/{groupId}")
+    public PaginationResponse<EventResponse> getAllByGroup(@RequestBody PaginationRequest request, @PathVariable Long groupId) {
+        return eventService.getAllEventByGroup(groupId, request);
     }
 }
