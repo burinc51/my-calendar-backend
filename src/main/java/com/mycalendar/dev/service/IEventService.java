@@ -24,4 +24,6 @@ public interface IEventService {
     void deleteEvent(Long eventId, Long userId);
 
     PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request);
+
+    PaginationResponse<EventResponse> getAllEvent(PaginationRequest request);
 }

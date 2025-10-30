@@ -60,4 +60,9 @@ public class EventRestController {
     public PaginationResponse<EventResponse> getAllByGroup(@RequestBody PaginationRequest request, @PathVariable Long groupId) {
         return eventService.getAllEventByGroup(groupId, request);
     }
+
+    @PostMapping("/all")
+    public PaginationResponse<EventResponse> getAll(@RequestBody PaginationRequest request) {
+        return eventService.getAllEvent(request);
+    }
 }

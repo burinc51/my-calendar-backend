@@ -228,4 +228,26 @@ public class EventService implements IEventService {
                 .last(pages.isLast())
                 .build();
     }
+
+    @Override
+    public PaginationResponse<EventResponse> getAllEvent(PaginationRequest request) {
+        Pageable pageable = request.getPageRequest();
+
+        List<EventProjection> projections = eventRepository.findAllEvents(pageable);
+        long totalElements = eventRepository.countAllEvents();
+
+        List<EventResponse> content = EventMapper.mapRowsMergedFromProjection(projections);
+
+        int totalPages = (int) Math.ceil((double) totalElements / pageable.getPageSize());
+        boolean isLast = (request.getPageNumber() >= totalPages);
+
+        return PaginationResponse.<EventResponse>builder()
+                .content(content)
+                .pageNo(request.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalElements(totalElements)
+                .totalPages(totalPages)
+                .last(isLast)
+                .build();
+    }
 }
