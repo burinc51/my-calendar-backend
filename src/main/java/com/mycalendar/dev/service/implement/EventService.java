@@ -9,6 +9,7 @@ import com.mycalendar.dev.mapper.EventMapper;
 import com.mycalendar.dev.payload.request.EventRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
+import com.mycalendar.dev.payload.response.event.EventMonthViewResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
 import com.mycalendar.dev.projection.EventProjection;
 import com.mycalendar.dev.repository.CustomEventRepository;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -259,7 +261,18 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public PaginationResponse<EventResponse> getAllEventsByMonthRange(PaginationRequest request) {
-        return null;
+    public List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate) {
+        List<EventProjection> content = eventRepository.findAllEventsByMonthRange(startDate, endDate);
+
+        return content.stream().map(
+                v -> EventMonthViewResponse.builder()
+                        .eventId(v.getEventId())
+                        .title(v.getTitle())
+                        .startDate(v.getStartDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")))
+                        .endDate(v.getEndDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")))
+                        .color(v.getColor())
+                        .allDay(v.getAllDay())
+                        .build()
+        ).toList();
     }
 }

@@ -3,6 +3,7 @@ package com.mycalendar.dev.controller.v1;
 import com.mycalendar.dev.payload.request.EventRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
+import com.mycalendar.dev.payload.response.event.EventMonthViewResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
 import com.mycalendar.dev.service.IEventService;
 import jakarta.validation.Valid;
@@ -64,5 +65,10 @@ public class EventRestController {
     @PostMapping("/all")
     public PaginationResponse<EventResponse> getAll(@RequestBody PaginationRequest request) {
         return eventService.getAllEvent(request);
+    }
+
+    @GetMapping("/month-view")
+    public List<EventMonthViewResponse> getMonthView(@RequestParam String startDate, @RequestParam String endDate) {
+        return eventService.getAllEventsByMonthRange(startDate, endDate);
     }
 }
