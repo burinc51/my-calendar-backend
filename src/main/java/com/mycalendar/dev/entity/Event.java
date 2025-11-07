@@ -43,10 +43,9 @@ public class Event {
     private String priority;
 
     private Boolean pinned = false;
-
     private String imageUrl; // เก็บ path รูป
-
     private Long createById;
+    private Boolean allDay = false;
 
     // Event belongs to Group
     @ManyToOne(fetch = FetchType.LAZY)

@@ -41,6 +41,8 @@ public interface EventProjection {
 
     Long getCreateById();
 
+    Boolean getAllDay();
+
     Long getGroupId();
 
     Long getUserId();

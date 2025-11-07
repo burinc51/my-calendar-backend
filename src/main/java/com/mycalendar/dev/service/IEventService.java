@@ -26,4 +26,6 @@ public interface IEventService {
     PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request);
 
     PaginationResponse<EventResponse> getAllEvent(PaginationRequest request);
+
+    PaginationResponse<EventResponse> getAllEventsByMonthRange(PaginationRequest request);
 }

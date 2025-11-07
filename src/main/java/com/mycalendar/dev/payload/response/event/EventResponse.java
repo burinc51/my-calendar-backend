@@ -27,9 +27,8 @@ public record EventResponse(
         String category,
         String priority,
         Boolean pinned,
-
+        Boolean allDay,
         String imageUrl,
-
         Long createById,
         Long groupId,
         List<EventUserResponse> assignees

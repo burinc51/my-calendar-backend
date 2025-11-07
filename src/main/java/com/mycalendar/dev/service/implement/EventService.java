@@ -250,4 +250,9 @@ public class EventService implements IEventService {
                 .last(isLast)
                 .build();
     }
+
+    @Override
+    public PaginationResponse<EventResponse> getAllEventsByMonthRange(PaginationRequest request) {
+        return null;
+    }
 }

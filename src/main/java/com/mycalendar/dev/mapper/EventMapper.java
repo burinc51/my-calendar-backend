@@ -40,6 +40,7 @@ public class EventMapper {
                 .groupId(event.getGroup().getGroupId())
                 .imageUrl(event.getImageUrl())
                 .createById(event.getCreateById())
+                .allDay(event.getAllDay())
                 .assignees(event.getUsers().stream()
                         .map(u -> new EventUserResponse(u.getUserId(), u.getUsername(), u.getName()))
                         .toList())
@@ -135,6 +136,7 @@ public class EventMapper {
                             .imageUrl(r.getImageUrl())
                             .groupId(r.getGroupId())
                             .createById(r.getCreateById())
+                            .allDay(r.getAllDay())
                             .assignees(new ArrayList<>())
                             .build()
             );
