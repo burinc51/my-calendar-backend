@@ -121,6 +121,7 @@ public class EventService implements IEventService {
         event.setCategory(request.getCategory());
         event.setPriority(request.getPriority());
         event.setPinned(request.getPinned());
+        event.setAllDay(request.getAllDay());
         if (request.getEventId() == null) {
             event.setUsers(participants);
         }
@@ -184,6 +185,7 @@ public class EventService implements IEventService {
     }
 
     @Override
+    @Transactional
     public EventResponse removeAssignees(Long eventId, List<Long> userIds) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
@@ -195,14 +197,19 @@ public class EventService implements IEventService {
     }
 
     @Override
+    @Transactional
     public void deleteEvent(Long eventId, Long userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
 
-        Group group = event.getGroup();
-
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
+
+        if (event.getCreateById().equals(userId)) {
+            throw new IllegalArgumentException("Cannot delete event created by yourself");
+        }
+
+        Group group = event.getGroup();
 
         if (group.getUserGroups().stream().noneMatch(ug -> ug.getUser().getUserId().equals(userId))) {
             throw new IllegalArgumentException("User is not a member of the group");

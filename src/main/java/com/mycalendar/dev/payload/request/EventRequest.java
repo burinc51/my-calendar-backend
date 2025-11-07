@@ -31,5 +31,6 @@ public class EventRequest {
 
     private Long groupId;
     private Long createById;
+    private Boolean allDay;
     private Set<Long> assigneeIds;
 }
