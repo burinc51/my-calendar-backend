@@ -1,10 +1,12 @@
 package com.mycalendar.dev.controller.v1;
 
 import com.mycalendar.dev.payload.request.*;
+import com.mycalendar.dev.payload.response.AuthResponse;
 import com.mycalendar.dev.payload.response.JwtResponse;
 import com.mycalendar.dev.payload.response.UserResponse;
 import com.mycalendar.dev.security.JwtTokenProvider;
 import com.mycalendar.dev.service.implement.AuthService;
+import com.mycalendar.dev.service.implement.GoogleAuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,10 +19,12 @@ public class AuthRestController {
 
     private final AuthService authService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final GoogleAuthService googleAuthService;
 
-    public AuthRestController(AuthService authService, JwtTokenProvider jwtTokenProvider) {
+    public AuthRestController(AuthService authService, JwtTokenProvider jwtTokenProvider, GoogleAuthService googleAuthService) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.googleAuthService = googleAuthService;
     }
 
     @PostMapping(value = "/sign-in", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -114,7 +118,7 @@ public class AuthRestController {
     }
 
     @PostMapping(value = "/google-sign-in", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> googleSignIn(@Valid @RequestBody GoogleSignInRequest googleSignInRequest) {
-        return authService.googleSignIn(googleSignInRequest.getIdToken());
+    public AuthResponse googleSignInV2(@Valid @RequestBody GoogleSignInRequest googleSignInRequest) {
+        return googleAuthService.googleSignIn(googleSignInRequest.getIdToken());
     }
 }

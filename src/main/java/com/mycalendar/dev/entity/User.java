@@ -59,7 +59,6 @@ public class User extends BaseEntity {
     )
     private Set<Permission> permissions = new HashSet<>();
 
-//    // ✅ Relationship with Event (via EventUser)
-//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private Set<EventUser> eventUsers = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserSocialProvider> socialProviders = new HashSet<>();
 }
