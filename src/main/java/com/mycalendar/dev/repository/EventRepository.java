@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
@@ -111,4 +112,25 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             """, nativeQuery = true)
     List<EventProjection> findAllEventsByMonthRange(@Param("startMonth") String startMonth,
                                                     @Param("endMonth") String endMonth);
+
+    /**
+     * หา events ที่ถึงเวลาแจ้งเตือนแล้ว (optimized)
+     * - notificationTime อยู่ในช่วง windowStart ถึง now
+     * - startDate > now (event ยังไม่เริ่ม)
+     * - notificationType เป็น PUSH หรือ EMAIL
+     * - notificationSent = false (ยังไม่เคยส่ง)
+     */
+    @Query(value = """
+            SELECT e.* FROM events e
+            WHERE e.notification_time IS NOT NULL
+              AND e.notification_time <= :now
+              AND e.notification_time >= :windowStart
+              AND e.start_date > :now
+              AND e.notification_type IN ('PUSH', 'EMAIL')
+              AND e.notification_sent = false
+            """, nativeQuery = true)
+    List<Event> findEventsToNotify(
+            @Param("now") LocalDateTime now,
+            @Param("windowStart") LocalDateTime windowStart
+    );
 }

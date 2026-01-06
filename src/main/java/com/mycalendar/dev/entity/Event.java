@@ -10,7 +10,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "events")
+@Table(name = "events", indexes = {
+        @Index(name = "idx_event_notification_time", columnList = "notification_time, notification_sent")
+})
 @Getter
 @Setter
 public class Event {
@@ -46,6 +48,9 @@ public class Event {
     private String imageUrl; // เก็บ path รูป
     private Long createById;
     private Boolean allDay = false;
+    
+    @Column(nullable = false)
+    private Boolean notificationSent = false; // Flag ว่าส่ง notification ไปแล้วหรือยัง
 
     // Event belongs to Group
     @ManyToOne(fetch = FetchType.LAZY)

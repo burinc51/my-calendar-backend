@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
@@ -114,6 +115,18 @@ public class EventService implements IEventService {
         event.setLocation(request.getLocation());
         event.setLatitude(request.getLatitude());
         event.setLongitude(request.getLongitude());
+        
+        // ✅ Reset notificationSent flag if notificationTime changed (reschedule)
+        LocalDateTime oldNotificationTime = event.getNotificationTime();
+        LocalDateTime newNotificationTime = request.getNotificationTime();
+        if (request.getEventId() == null) {
+            // New event - ensure flag is false
+            event.setNotificationSent(false);
+        } else if (newNotificationTime != null && !newNotificationTime.equals(oldNotificationTime)) {
+            // Existing event with changed notification time - reset flag
+            event.setNotificationSent(false);
+        }
+        
         event.setNotificationTime(request.getNotificationTime());
         event.setNotificationType(request.getNotificationType());
         event.setRemindBeforeMinutes(request.getRemindBeforeMinutes());
