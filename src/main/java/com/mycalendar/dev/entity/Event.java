@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -33,24 +34,25 @@ public class Event {
     private Double latitude;
     private Double longitude;
 
-    private LocalDateTime notificationTime; // ตั้งเวลาแจ้งเตือน
+    private LocalDateTime notificationTime; // Notification time setting
     private String notificationType; // POPUP, EMAIL, PUSH
-    private Integer remindBeforeMinutes; // แจ้งเตือนก่อนกี่นาที
+    private Integer remindBeforeMinutes; // Minutes to remind before
 
     private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, CUSTOM
-    private LocalDateTime repeatUntil; // สิ้นสุดการทำซ้ำ
+    private LocalDateTime repeatUntil; // Repeat end date
 
     private String color;
     private String category;
     private String priority;
 
     private Boolean pinned = false;
-    private String imageUrl; // เก็บ path รูป
+    private String imageUrl; // Image path storage
     private Long createById;
     private Boolean allDay = false;
     
     @Column(nullable = false)
-    private Boolean notificationSent = false; // Flag ว่าส่ง notification ไปแล้วหรือยัง
+    @ColumnDefault("false")
+    private Boolean notificationSent = false; // Flag indicating if notification has been sent
 
     // Event belongs to Group
     @ManyToOne(fetch = FetchType.LAZY)

@@ -114,11 +114,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                                     @Param("endMonth") String endMonth);
 
     /**
-     * หา events ที่ถึงเวลาแจ้งเตือนแล้ว (optimized)
-     * - notificationTime อยู่ในช่วง windowStart ถึง now
-     * - startDate > now (event ยังไม่เริ่ม)
-     * - notificationType เป็น PUSH หรือ EMAIL
-     * - notificationSent = false (ยังไม่เคยส่ง)
+     * Find events that are due for notification (optimized)
+     * - notificationTime is within windowStart to now
+     * - startDate > now (event has not started yet)
+     * - notificationType is PUSH or EMAIL
+     * - notificationSent = false (not sent yet)
      */
     @Query(value = """
             SELECT e.* FROM events e

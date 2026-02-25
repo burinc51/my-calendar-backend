@@ -107,7 +107,7 @@ public class EventService implements IEventService {
             event.setCreateById(creator.getUserId());
         }
 
-        // 7) set fields (update ทุกกรณี)
+        // 7) set fields (update in all cases)
         event.setTitle(request.getTitle());
         event.setDescription(request.getDescription());
         event.setStartDate(request.getStartDate());
