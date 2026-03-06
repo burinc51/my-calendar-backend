@@ -22,19 +22,22 @@ public class QuartzConfig {
     
     /**
       * Defines the Trigger for NotificationJob
-      * Runs every 1 minute
+      * Runs every 1 minute.
+      * If the server restarts and a tick was missed, fires immediately on recovery.
       */
     @Bean
     public Trigger notificationJobTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
                 .withIntervalInMinutes(1)
-                .repeatForever();
-        
+                .repeatForever()
+                .withMisfireHandlingInstructionFireNow(); // fire immediately after restart
+
         return TriggerBuilder.newTrigger()
                 .forJob(notificationJobDetail())
                 .withIdentity("notificationTrigger", "notificationGroup")
                 .withDescription("Trigger for notification job - runs every 1 minute")
                 .withSchedule(scheduleBuilder)
+                .startNow() // start immediately when Spring boots
                 .build();
     }
 }
