@@ -8,5 +8,5 @@ import lombok.Setter;
 public class GroupRequest {
     private String groupName;
     private String description;
-    private Long creatorUserId; // user ที่สร้างกลุ่ม
+    private Long creatorUserId; // user who created the group
 }

@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
@@ -82,8 +83,9 @@ public class EventService implements IEventService {
             throw new IllegalArgumentException("End date must be after start date");
         }
 
-        // 5) calculate notification time
-        if (request.getRemindBeforeMinutes() != null && request.getNotificationTime() == null && request.getStartDate() != null) {
+        // 5) calculate notification time from remindBeforeMinutes
+        // If remindBeforeMinutes is provided, always recalculate notificationTime (overrides manual value)
+        if (request.getRemindBeforeMinutes() != null && request.getStartDate() != null) {
             request.setNotificationTime(request.getStartDate().minusMinutes(request.getRemindBeforeMinutes()));
         }
 
@@ -106,7 +108,7 @@ public class EventService implements IEventService {
             event.setCreateById(creator.getUserId());
         }
 
-        // 7) set fields (update ทุกกรณี)
+        // 7) set fields (update in all cases)
         event.setTitle(request.getTitle());
         event.setDescription(request.getDescription());
         event.setStartDate(request.getStartDate());
@@ -114,11 +116,27 @@ public class EventService implements IEventService {
         event.setLocation(request.getLocation());
         event.setLatitude(request.getLatitude());
         event.setLongitude(request.getLongitude());
-        event.setNotificationTime(request.getNotificationTime());
+
+        // ✅ Reset notificationSent flag when notificationTime, startDate or remindBeforeMinutes changes
+        LocalDateTime oldNotificationTime = event.getNotificationTime();
+        LocalDateTime newNotificationTime = request.getNotificationTime();
+        boolean isNew = (request.getEventId() == null);
+        boolean notificationChanged = newNotificationTime != null
+                && !newNotificationTime.equals(oldNotificationTime);
+        if (isNew || notificationChanged) {
+            event.setNotificationSent(false);
+        }
+
+        event.setNotificationTime(newNotificationTime);
         event.setNotificationType(request.getNotificationType());
         event.setRemindBeforeMinutes(request.getRemindBeforeMinutes());
+
+        // ✅ Repeat fields
         event.setRepeatType(request.getRepeatType());
         event.setRepeatUntil(request.getRepeatUntil());
+        event.setRepeatInterval(request.getRepeatInterval() != null ? request.getRepeatInterval() : 1);
+        event.setRepeatDays(request.getRepeatDays());
+
         event.setColor(request.getColor());
         event.setCategory(request.getCategory());
         event.setPriority(request.getPriority());

@@ -29,22 +29,22 @@ public class CustomEventRepositoryImpl implements CustomEventRepository {
     @Transactional()
     public Page<EventResponse> findAllEventByGroup(Long groupId, Pageable pageable) {
         try {
-            // โหลด SQL โดยไม่มี LIMIT/OFFSET
+            // Load SQL without LIMIT/OFFSET
             String baseSql = loadSqlFromFile("/db/migration/sql/event/SELECT_EVENT_BY_GROUP.sql");
             String countSql = loadSqlFromFile("/db/migration/sql/event/count/SELECT_EVENT_BY_GROUP_COUNT.sql");
 
-            // Query หลัก (ไม่ต้องใช้ pagination)
+            // Main query (no pagination at DB level)
             Query query = entityManager.createNativeQuery(baseSql);
             query.setParameter("groupId", groupId);
 
-            // Query นับจำนวน
+            // Count query
             Query countQuery = entityManager.createNativeQuery(countSql);
             countQuery.setParameter("groupId", groupId);
 
             List<Object[]> rows = query.getResultList();
             List<EventResponse> responses = EventMapper.mapRowsMerged(rows);
 
-            // ใช้ pagination หลังจาก mapping เสร็จแล้ว
+            // Apply pagination in-memory after mapping
             int start = (int) pageable.getOffset();
             int end = Math.min((start + pageable.getPageSize()), responses.size());
             List<EventResponse> pageContent = responses.subList(start, end);

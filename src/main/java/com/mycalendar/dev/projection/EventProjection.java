@@ -23,11 +23,19 @@ public interface EventProjection {
 
     String getNotificationType();
 
+    Integer getRemindBeforeValue();
+
+    String getRemindBeforeUnit();
+
     Integer getRemindBeforeMinutes();
 
     String getRepeatType();
 
     LocalDateTime getRepeatUntil();
+
+    Integer getRepeatInterval();
+
+    String getRepeatDays();
 
     String getColor();
 

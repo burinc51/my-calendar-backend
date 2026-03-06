@@ -26,7 +26,8 @@ public class EventRestController {
 
 
     @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestPart(value = "file") MultipartFile file) {
+    public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest,
+                                     @RequestPart(value = "file", required = false) MultipartFile file) {
         return eventService.saveOrUpdate(eventRequest, file);
     }
 

@@ -52,12 +52,12 @@ public class GoogleAuthService implements IGoogleAuth {
 
         System.out.println("payload = " + payload);
 
-        String googleSub = payload.getSubject();           // provider_id (สำคัญที่สุด)
+        String googleSub = payload.getSubject();           // provider_id (most important)
         String email = payload.getEmail();
         String name = (String) payload.get("name");
         String pictureUrl = (String) payload.get("picture");
 
-        // 1. หาจาก Google sub ก่อน (เร็ว + แม่นยำสุด)
+        // 1. Look up by Google sub first (fastest and most accurate)
         Optional<User> userOpt = socialProviderRepo
                 .findByProviderAndProviderId(ProviderType.GOOGLE, googleSub)
                 .map(UserSocialProvider::getUser);
@@ -65,30 +65,30 @@ public class GoogleAuthService implements IGoogleAuth {
         User user;
 
         if (userOpt.isPresent()) {
-            // เคยล็อกอินด้วย Google มาก่อน → ใช้ user เดิม
+            // Previously logged in with Google → reuse existing user
             user = userOpt.get();
 
-            // อัปเดตข้อมูลล่าสุดจาก Google (optional แต่ดี)
+            // Refresh latest info from Google (optional but useful)
             updateSocialProvider(user, googleSub, email, name, pictureUrl);
         } else {
-            // ยังไม่เคยผูก Google นี้เลย
+            // Google account not linked yet
 
-            // 2. ลองหาจาก email ว่ามีผู้ใช้ที่มี email นี้อยู่แล้วไหม (Account Linking)
+            // 2. Try to find an existing user by email (Account Linking)
             Optional<User> existingUserByEmail = userRepository.findByEmail(email);
 
             if (existingUserByEmail.isPresent()) {
-                // มีผู้ใช้จาก email/password → ผูก Google เข้ากับบัญชีเดิม
+                // User exists via email/password → link Google to the existing account
                 user = existingUserByEmail.get();
                 createSocialProvider(user, googleSub, email, name, pictureUrl);
             } else {
-                // 3. ไม่เคยมีเลย → สร้างผู้ใช้ใหม่
+                // 3. No existing account → create a new user
                 user = createNewUser(email, name);
                 createSocialProvider(user, googleSub, email, name, pictureUrl);
             }
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-        // สร้าง JWT
+        // Generate JWT tokens
         String accessToken = jwtTokenProvider.generateToken(userDetails);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
 
@@ -99,7 +99,7 @@ public class GoogleAuthService implements IGoogleAuth {
                 .username(user.getUsername())
                 .name(user.getName())
                 .email(user.getEmail())
-                // ดึง picture จาก social provider ล่าสุด (Google)
+                // Retrieve picture from the latest social provider (Google)
                 .pictureUrl(pictureUrl)
                 .build();
     }
@@ -191,7 +191,7 @@ public class GoogleAuthService implements IGoogleAuth {
                     sp.setDisplayName(displayName);
                     sp.setPictureUrl(pictureUrl);
                     sp.setEmail(email);
-                    // ไม่ต้อง save() เพราะ @Transactional
+                    // No explicit save() needed — @Transactional handles it
                 });
     }
 

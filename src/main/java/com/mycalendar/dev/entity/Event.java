@@ -4,13 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "events")
+@Table(name = "events", indexes = {
+        @Index(name = "idx_event_notification_time", columnList = "notification_time, notification_sent")
+})
 @Getter
 @Setter
 public class Event {
@@ -31,21 +34,30 @@ public class Event {
     private Double latitude;
     private Double longitude;
 
-    private LocalDateTime notificationTime; // ตั้งเวลาแจ้งเตือน
+    private LocalDateTime notificationTime; // Notification time setting
     private String notificationType; // POPUP, EMAIL, PUSH
-    private Integer remindBeforeMinutes; // แจ้งเตือนก่อนกี่นาที
+    private Integer remindBeforeValue;  // Numeric value of the remind offset (e.g. 15, 2, 1)
+    private String remindBeforeUnit;    // Unit of the offset: MINUTES, HOURS, DAYS, WEEKS
+    // Computed field kept for backward-compat: total minutes = remindBeforeValue converted to minutes
+    private Integer remindBeforeMinutes; // Minutes to remind before (auto-calculated)
 
-    private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, CUSTOM
-    private LocalDateTime repeatUntil; // สิ้นสุดการทำซ้ำ
+    private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, YEARLY, CUSTOM
+    private LocalDateTime repeatUntil; // Repeat end date
+    private Integer repeatInterval; // ทำซ้ำทุกกี่หน่วย (เช่น ทุก 2 สัปดาห์) default = 1
+    private String repeatDays; // วันที่ทำซ้ำ สำหรับ CUSTOM/WEEKLY เช่น "MON,WED,FRI"
 
     private String color;
     private String category;
     private String priority;
 
     private Boolean pinned = false;
-    private String imageUrl; // เก็บ path รูป
+    private String imageUrl; // Image path storage
     private Long createById;
     private Boolean allDay = false;
+    
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private Boolean notificationSent = false; // Flag indicating if notification has been sent
 
     // Event belongs to Group
     @ManyToOne(fetch = FetchType.LAZY)

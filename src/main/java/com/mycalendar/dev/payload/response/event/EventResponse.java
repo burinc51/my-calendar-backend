@@ -18,10 +18,14 @@ public record EventResponse(
 
         String notificationTime,
         String notificationType,
+        Integer remindBeforeValue,
+        String remindBeforeUnit,
         Integer remindBeforeMinutes,
 
         String repeatType,
         String repeatUntil,
+        Integer repeatInterval,
+        String repeatDays,
 
         String color,
         String category,
@@ -34,3 +38,5 @@ public record EventResponse(
         List<EventUserResponse> assignees
 ) {
 }
+
+
