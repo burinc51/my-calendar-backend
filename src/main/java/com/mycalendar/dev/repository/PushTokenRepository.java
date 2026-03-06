@@ -11,34 +11,34 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository สำหรับจัดการ Push Token
+ * Repository for managing Push Tokens.
  */
 public interface PushTokenRepository extends JpaRepository<PushToken, Long> {
-    
+
     /**
-     * หา push tokens ที่ active ทั้งหมดของ user
+     * Finds all active push tokens for a given user.
      */
     List<PushToken> findByUserIdAndActiveTrue(Long userId);
-    
+
     /**
-     * หา push token ตาม token string
+     * Finds a push token by its token string.
      */
     Optional<PushToken> findByToken(String token);
-    
+
     /**
-     * ลบ token ตาม token string
+     * Deletes a push token by its token string.
      */
     @Modifying
     @Transactional
     void deleteByToken(String token);
-    
+
     /**
-     * ตรวจสอบว่า token นี้มีอยู่แล้วหรือไม่
+     * Checks whether a token already exists.
      */
     boolean existsByToken(String token);
-    
+
     /**
-     * หา tokens ทั้งหมดของ user ตาม userId list
+     * Finds all active tokens for a list of user IDs.
      */
     @Query("SELECT pt FROM PushToken pt WHERE pt.userId IN :userIds AND pt.active = true")
     List<PushToken> findActiveTokensByUserIds(@Param("userIds") List<Long> userIds);

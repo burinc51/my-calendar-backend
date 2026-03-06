@@ -120,9 +120,8 @@ public class NotificationService implements INotificationService {
         
         // Build notification message
         String title = "🔔 " + event.getTitle();
-        String body = String.format("Event starts in %d minutes",
-                event.getRemindBeforeMinutes() != null ? event.getRemindBeforeMinutes() : 15);
-        
+        String body = buildReminderBody(event);
+
         if (event.getLocation() != null && !event.getLocation().isEmpty()) {
             body += " • " + event.getLocation();
         }
@@ -145,8 +144,32 @@ public class NotificationService implements INotificationService {
     }
     
     /**
-     * เลื่อน recurring events ไปยัง occurrence ถัดไป
-     * เรียกหลัง processEventNotifications() ทุกครั้ง
+     * Builds a human-friendly reminder body string.
+     * Uses remindBeforeValue + remindBeforeUnit when available,
+     * falls back to remindBeforeMinutes, then defaults to 15 minutes.
+     */
+    private String buildReminderBody(Event event) {
+        Integer value = event.getRemindBeforeValue();
+        String unit  = event.getRemindBeforeUnit();
+
+        if (value != null && unit != null) {
+            String unitLabel = switch (unit.toUpperCase()) {
+                case "HOURS" -> value == 1 ? "hour"   : "hours";
+                case "DAYS"  -> value == 1 ? "day"    : "days";
+                case "WEEKS" -> value == 1 ? "week"   : "weeks";
+                default      -> value == 1 ? "minute" : "minutes";
+            };
+            return String.format("Event starts in %d %s", value, unitLabel);
+        }
+
+        // Fallback: use remindBeforeMinutes
+        int minutes = event.getRemindBeforeMinutes() != null ? event.getRemindBeforeMinutes() : 15;
+        return String.format("Event starts in %d %s", minutes, minutes == 1 ? "minute" : "minutes");
+    }
+
+    /**
+     * Advances recurring events to the next occurrence.
+     * Called after processEventNotifications() on every scheduler tick.
      */
     @Override
     @Transactional
@@ -164,13 +187,13 @@ public class NotificationService implements INotificationService {
         for (Event event : recurringEvents) {
             LocalDateTime nextStart = computeNextOccurrence(event, now);
             if (nextStart == null) {
-                // ไม่มี occurrence ถัดไปแล้ว (เกิน repeatUntil)
+                // No more occurrences (past repeatUntil)
                 log.info("✅ Recurring event {} has no more occurrences, stopping repeat", event.getEventId());
                 event.setRepeatType("NONE");
                 continue;
             }
 
-            // คำนวณ duration ของ event เพื่อเลื่อน endDate ไปด้วย
+            // Calculate event duration to shift endDate accordingly
             long durationMinutes = 0;
             if (event.getEndDate() != null && event.getStartDate() != null) {
                 durationMinutes = java.time.Duration.between(event.getStartDate(), event.getEndDate()).toMinutes();
@@ -181,16 +204,16 @@ public class NotificationService implements INotificationService {
                 event.setEndDate(nextStart.plusMinutes(durationMinutes));
             }
 
-            // คำนวณ notificationTime ใหม่จาก remindBeforeMinutes
+            // Recalculate notificationTime from remindBeforeMinutes
             if (event.getRemindBeforeMinutes() != null) {
                 event.setNotificationTime(nextStart.minusMinutes(event.getRemindBeforeMinutes()));
             } else if (event.getNotificationTime() != null) {
-                // เลื่อน notificationTime ตาม offset เดิม
+                // Shift notificationTime by the same offset as before
                 long offsetMinutes = java.time.Duration.between(event.getNotificationTime(), event.getStartDate()).toMinutes();
                 event.setNotificationTime(nextStart.minusMinutes(offsetMinutes));
             }
 
-            // Reset flag เพื่อให้แจ้งเตือน occurrence ถัดไป
+            // Reset flag so the next occurrence triggers a notification
             event.setNotificationSent(false);
 
             log.info("🔁 Event {} rescheduled → startDate: {}, notificationTime: {}",
@@ -201,7 +224,7 @@ public class NotificationService implements INotificationService {
     }
 
     /**
-     * คำนวณ occurrence ถัดไปของ recurring event
+     * Computes the next occurrence date/time of a recurring event.
      */
     private LocalDateTime computeNextOccurrence(Event event, LocalDateTime now) {
         String repeatType = event.getRepeatType();
@@ -219,7 +242,7 @@ public class NotificationService implements INotificationService {
 
         if (next == null) return null;
 
-        // ถ้าเกิน repeatUntil ให้หยุด
+        // Stop if the next occurrence is past repeatUntil
         if (event.getRepeatUntil() != null && next.isAfter(event.getRepeatUntil())) {
             return null;
         }
@@ -228,17 +251,18 @@ public class NotificationService implements INotificationService {
     }
 
     /**
-     * คำนวณ next occurrence สำหรับ WEEKLY/CUSTOM โดยพิจารณา repeatDays
+     * Computes the next occurrence for WEEKLY/CUSTOM repeat types,
+     * respecting the repeatDays constraint.
      */
     private LocalDateTime computeNextWeeklyOccurrence(Event event, LocalDateTime current, int interval, LocalDateTime now) {
         String repeatDays = event.getRepeatDays();
 
-        // ถ้าไม่มี repeatDays ให้เลื่อนไปอีก N สัปดาห์ตรงๆ
+        // No repeatDays defined — simply advance by N weeks
         if (repeatDays == null || repeatDays.isBlank()) {
             return current.plusWeeks(interval);
         }
 
-        // แปลง repeatDays เป็น Set<DayOfWeek>
+        // Parse repeatDays into a Set<DayOfWeek>
         Set<DayOfWeek> allowedDays = new java.util.HashSet<>();
         for (String day : repeatDays.split(",")) {
             try {
@@ -252,16 +276,16 @@ public class NotificationService implements INotificationService {
             return current.plusWeeks(interval);
         }
 
-        // หาวันถัดไปในสัปดาห์เดียวกัน หรือข้ามสัปดาห์
+        // Search the next allowed day within the next 14 days
         LocalDateTime candidate = current.plusDays(1);
-        for (int i = 0; i < 14; i++) { // ค้นหาสูงสุด 14 วัน
+        for (int i = 0; i < 14; i++) {
             if (allowedDays.contains(candidate.getDayOfWeek()) && candidate.isAfter(now)) {
                 return candidate;
             }
             candidate = candidate.plusDays(1);
         }
 
-        // fallback: เลื่อนไปอีก N สัปดาห์
+        // Fallback: advance by N weeks
         return current.plusWeeks(interval);
     }
 

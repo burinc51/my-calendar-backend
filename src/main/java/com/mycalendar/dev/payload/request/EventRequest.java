@@ -26,20 +26,30 @@ public class EventRequest {
     private Double longitude;
 
     // ===== Notification =====
-    /** notificationTime จะถูกคำนวณอัตโนมัติจาก remindBeforeMinutes ถ้าไม่ได้ระบุมาเอง */
+    /** notificationTime is auto-calculated from remindBeforeValue+remindBeforeUnit if not provided explicitly */
     private LocalDateTime notificationTime;
     private String notificationType; // PUSH, EMAIL, POPUP
-    /** จำนวนนาทีก่อนกิจกรรมเริ่มที่ต้องการแจ้งเตือน */
+    /**
+     * Numeric value of how far before the event to send the notification.
+     * e.g. 15 (minutes), 2 (hours), 1 (day), 1 (week)
+     */
+    private Integer remindBeforeValue;
+    /**
+     * Unit for remindBeforeValue: MINUTES, HOURS, DAYS, WEEKS
+     * Defaults to MINUTES when not specified.
+     */
+    private String remindBeforeUnit;
+    /** Total minutes (auto-calculated from remindBeforeValue + remindBeforeUnit, kept for compatibility) */
     private Integer remindBeforeMinutes;
 
     // ===== Repeat =====
-    /** ประเภทการทำซ้ำ: NONE, DAILY, WEEKLY, MONTHLY, YEARLY, CUSTOM */
+    /** Repeat type: NONE, DAILY, WEEKLY, MONTHLY, YEARLY, CUSTOM */
     private String repeatType;
-    /** วันที่สิ้นสุดการทำซ้ำ */
+    /** Date after which the event stops repeating */
     private LocalDateTime repeatUntil;
-    /** ทำซ้ำทุกกี่หน่วย เช่น 1 = ทุกสัปดาห์, 2 = ทุก 2 สัปดาห์ */
+    /** Repeat every N units, e.g. 1 = every week, 2 = every 2 weeks */
     private Integer repeatInterval;
-    /** วันที่ทำซ้ำสำหรับ WEEKLY/CUSTOM เช่น "MON,WED,FRI" */
+    /** Days of the week for WEEKLY/CUSTOM repeat, e.g. "MONDAY,WEDNESDAY,FRIDAY" */
     private String repeatDays;
 
     private String color;

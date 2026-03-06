@@ -54,7 +54,7 @@ public class RowMapperUtil {
             if (targetType == LocalDate.class) return (T) toLocalDate(val);
             if (targetType == LocalDateTime.class) return (T) toLocalDateTime(val);
 
-            return null; // ไม่รู้จัก type → คืน null
+            return null; // Unknown type → return null
         } catch (Exception e) {
             return null; // If an error occurs during cast/parse → return null
         }

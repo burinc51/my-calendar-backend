@@ -84,7 +84,7 @@ public class EventService implements IEventService {
         }
 
         // 5) calculate notification time from remindBeforeMinutes
-        //    ถ้าระบุ remindBeforeMinutes จะคำนวณ notificationTime ใหม่เสมอ (override)
+        // If remindBeforeMinutes is provided, always recalculate notificationTime (overrides manual value)
         if (request.getRemindBeforeMinutes() != null && request.getStartDate() != null) {
             request.setNotificationTime(request.getStartDate().minusMinutes(request.getRemindBeforeMinutes()));
         }
@@ -117,7 +117,7 @@ public class EventService implements IEventService {
         event.setLatitude(request.getLatitude());
         event.setLongitude(request.getLongitude());
 
-        // ✅ Reset notificationSent flag เมื่อมีการเปลี่ยน notificationTime, startDate หรือ remindBeforeMinutes
+        // ✅ Reset notificationSent flag when notificationTime, startDate or remindBeforeMinutes changes
         LocalDateTime oldNotificationTime = event.getNotificationTime();
         LocalDateTime newNotificationTime = request.getNotificationTime();
         boolean isNew = (request.getEventId() == null);

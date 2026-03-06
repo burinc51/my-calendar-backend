@@ -1,14 +1,13 @@
 package com.mycalendar.dev.enums;
 
 /**
- * ประเภทการทำซ้ำของกิจกรรม
+ * Repeat type for events
  */
 public enum RepeatType {
-    NONE,       // ไม่ทำซ้ำ
-    DAILY,      // ทุกวัน
-    WEEKLY,     // ทุกสัปดาห์
-    MONTHLY,    // ทุกเดือน
-    YEARLY,     // ทุกปี
-    CUSTOM      // กำหนดเอง (ใช้ repeatInterval และ repeatDays)
+    NONE,       // No repeat
+    DAILY,      // Every day
+    WEEKLY,     // Every week
+    MONTHLY,    // Every month
+    YEARLY,     // Every year
+    CUSTOM      // Custom (uses repeatInterval and repeatDays)
 }
-

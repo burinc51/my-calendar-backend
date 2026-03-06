@@ -18,6 +18,8 @@ public record EventResponse(
 
         String notificationTime,
         String notificationType,
+        Integer remindBeforeValue,
+        String remindBeforeUnit,
         Integer remindBeforeMinutes,
 
         String repeatType,

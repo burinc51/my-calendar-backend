@@ -7,8 +7,8 @@ public interface INotificationService {
     void processEventNotifications();
 
     /**
-     * เลื่อนเวลาของ recurring events ไปยัง occurrence ถัดไป
-     * หลังจาก notification ถูกส่งแล้ว
+     * Advances recurring events to the next occurrence
+     * after a notification has been sent.
      */
     void rescheduleRecurringNotifications();
 

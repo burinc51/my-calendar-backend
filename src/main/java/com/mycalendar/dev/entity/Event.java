@@ -36,7 +36,10 @@ public class Event {
 
     private LocalDateTime notificationTime; // Notification time setting
     private String notificationType; // POPUP, EMAIL, PUSH
-    private Integer remindBeforeMinutes; // Minutes to remind before
+    private Integer remindBeforeValue;  // Numeric value of the remind offset (e.g. 15, 2, 1)
+    private String remindBeforeUnit;    // Unit of the offset: MINUTES, HOURS, DAYS, WEEKS
+    // Computed field kept for backward-compat: total minutes = remindBeforeValue converted to minutes
+    private Integer remindBeforeMinutes; // Minutes to remind before (auto-calculated)
 
     private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, YEARLY, CUSTOM
     private LocalDateTime repeatUntil; // Repeat end date

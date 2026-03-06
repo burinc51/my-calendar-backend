@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * Request DTO สำหรับ register Push Token
+ * Request DTO for registering a Push Token
  */
 @Data
 public class PushTokenRequest {

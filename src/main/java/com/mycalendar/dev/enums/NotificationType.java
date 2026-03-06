@@ -1,10 +1,10 @@
 package com.mycalendar.dev.enums;
 
 /**
- * ประเภทการแจ้งเตือน
+ * Notification type for events
  */
 public enum NotificationType {
-    POPUP,  // แจ้งเตือนแบบ popup ใน app
-    EMAIL,  // ส่ง email
-    PUSH    // Push Notification
+    POPUP,  // In-app popup notification
+    EMAIL,  // Send via email
+    PUSH    // Push notification
 }
