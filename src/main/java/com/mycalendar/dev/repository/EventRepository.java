@@ -27,6 +27,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                    e.remind_before_minutes AS remindBeforeMinutes,
                    e.repeat_type           AS repeatType,
                    e.repeat_until          AS repeatUntil,
+                   e.repeat_interval       AS repeatInterval,
+                   e.repeat_days           AS repeatDays,
                    e.color                 AS color,
                    e.category              AS category,
                    e.priority              AS priority,
@@ -70,6 +72,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                    e.remind_before_minutes AS remindBeforeMinutes,
                    e.repeat_type           AS repeatType,
                    e.repeat_until          AS repeatUntil,
+                   e.repeat_interval       AS repeatInterval,
+                   e.repeat_days           AS repeatDays,
                    e.color                 AS color,
                    e.category              AS category,
                    e.priority              AS priority,
@@ -116,7 +120,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     /**
      * Find events that are due for notification (optimized)
      * - notificationTime is within windowStart to now
-     * - startDate > now (event has not started yet)
      * - notificationType is PUSH or EMAIL
      * - notificationSent = false (not sent yet)
      */
@@ -133,4 +136,21 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("now") LocalDateTime now,
             @Param("windowStart") LocalDateTime windowStart
     );
+
+    /**
+     * Find recurring events whose startDate has passed and need to be rescheduled to the next occurrence.
+     * - repeatType is not NONE
+     * - notificationSent = true (notification already sent for current occurrence)
+     * - startDate <= now (current occurrence has passed or is happening now)
+     * - repeatUntil is null OR repeatUntil > now (repeat period has not ended)
+     */
+    @Query(value = """
+            SELECT e.* FROM events e
+            WHERE e.repeat_type IS NOT NULL
+              AND e.repeat_type <> 'NONE'
+              AND e.notification_sent = true
+              AND e.start_date <= :now
+              AND (e.repeat_until IS NULL OR e.repeat_until > :now)
+            """, nativeQuery = true)
+    List<Event> findRecurringEventsToReschedule(@Param("now") LocalDateTime now);
 }

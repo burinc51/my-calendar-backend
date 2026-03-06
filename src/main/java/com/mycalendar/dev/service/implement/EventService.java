@@ -83,8 +83,9 @@ public class EventService implements IEventService {
             throw new IllegalArgumentException("End date must be after start date");
         }
 
-        // 5) calculate notification time
-        if (request.getRemindBeforeMinutes() != null && request.getNotificationTime() == null && request.getStartDate() != null) {
+        // 5) calculate notification time from remindBeforeMinutes
+        //    ถ้าระบุ remindBeforeMinutes จะคำนวณ notificationTime ใหม่เสมอ (override)
+        if (request.getRemindBeforeMinutes() != null && request.getStartDate() != null) {
             request.setNotificationTime(request.getStartDate().minusMinutes(request.getRemindBeforeMinutes()));
         }
 
@@ -115,23 +116,27 @@ public class EventService implements IEventService {
         event.setLocation(request.getLocation());
         event.setLatitude(request.getLatitude());
         event.setLongitude(request.getLongitude());
-        
-        // ✅ Reset notificationSent flag if notificationTime changed (reschedule)
+
+        // ✅ Reset notificationSent flag เมื่อมีการเปลี่ยน notificationTime, startDate หรือ remindBeforeMinutes
         LocalDateTime oldNotificationTime = event.getNotificationTime();
         LocalDateTime newNotificationTime = request.getNotificationTime();
-        if (request.getEventId() == null) {
-            // New event - ensure flag is false
-            event.setNotificationSent(false);
-        } else if (newNotificationTime != null && !newNotificationTime.equals(oldNotificationTime)) {
-            // Existing event with changed notification time - reset flag
+        boolean isNew = (request.getEventId() == null);
+        boolean notificationChanged = newNotificationTime != null
+                && !newNotificationTime.equals(oldNotificationTime);
+        if (isNew || notificationChanged) {
             event.setNotificationSent(false);
         }
-        
-        event.setNotificationTime(request.getNotificationTime());
+
+        event.setNotificationTime(newNotificationTime);
         event.setNotificationType(request.getNotificationType());
         event.setRemindBeforeMinutes(request.getRemindBeforeMinutes());
+
+        // ✅ Repeat fields
         event.setRepeatType(request.getRepeatType());
         event.setRepeatUntil(request.getRepeatUntil());
+        event.setRepeatInterval(request.getRepeatInterval() != null ? request.getRepeatInterval() : 1);
+        event.setRepeatDays(request.getRepeatDays());
+
         event.setColor(request.getColor());
         event.setCategory(request.getCategory());
         event.setPriority(request.getPriority());

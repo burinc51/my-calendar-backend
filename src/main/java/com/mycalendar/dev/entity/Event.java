@@ -38,8 +38,10 @@ public class Event {
     private String notificationType; // POPUP, EMAIL, PUSH
     private Integer remindBeforeMinutes; // Minutes to remind before
 
-    private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, CUSTOM
+    private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, YEARLY, CUSTOM
     private LocalDateTime repeatUntil; // Repeat end date
+    private Integer repeatInterval; // ทำซ้ำทุกกี่หน่วย (เช่น ทุก 2 สัปดาห์) default = 1
+    private String repeatDays; // วันที่ทำซ้ำ สำหรับ CUSTOM/WEEKLY เช่น "MON,WED,FRI"
 
     private String color;
     private String category;

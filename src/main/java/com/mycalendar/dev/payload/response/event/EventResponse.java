@@ -22,6 +22,8 @@ public record EventResponse(
 
         String repeatType,
         String repeatUntil,
+        Integer repeatInterval,
+        String repeatDays,
 
         String color,
         String category,
@@ -34,3 +36,5 @@ public record EventResponse(
         List<EventUserResponse> assignees
 ) {
 }
+
+

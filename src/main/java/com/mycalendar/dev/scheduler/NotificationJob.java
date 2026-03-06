@@ -19,7 +19,10 @@ public class NotificationJob extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         log.debug("🔔 NotificationJob triggered");
         try {
+            // 1) ส่ง notification สำหรับ event ที่ถึงเวลาแล้ว
             notificationService.processEventNotifications();
+            // 2) เลื่อน recurring events ไปยัง occurrence ถัดไป
+            notificationService.rescheduleRecurringNotifications();
         } catch (Exception e) {
             log.error("❌ Error in NotificationJob: {}", e.getMessage(), e);
             throw new JobExecutionException(e);

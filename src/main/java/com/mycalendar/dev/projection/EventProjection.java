@@ -29,6 +29,10 @@ public interface EventProjection {
 
     LocalDateTime getRepeatUntil();
 
+    Integer getRepeatInterval();
+
+    String getRepeatDays();
+
     String getColor();
 
     String getCategory();
