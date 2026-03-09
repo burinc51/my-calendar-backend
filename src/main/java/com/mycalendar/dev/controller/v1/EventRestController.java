@@ -25,15 +25,55 @@ public class EventRestController {
     }
 
 
+    /**
+     * Create event with optional image file (multipart/form-data).
+     * Body JSON goes in the "body" part, image in the "file" part.
+     */
     @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public EventResponse createEvent(@Valid @RequestPart("body") EventRequest eventRequest,
                                      @RequestPart(value = "file", required = false) MultipartFile file) {
         return eventService.saveOrUpdate(eventRequest, file);
     }
 
+    /**
+     * Create event with plain JSON (application/json) — no file upload.
+     * Use this when you don't need to attach an image.
+     *
+     * Example body:
+     * {
+     *   "title": "Meeting",
+     *   "startDate": "2026-03-10T09:00:00",
+     *   "endDate":   "2026-03-10T10:00:00",
+     *   "groupId": 1,
+     *   "createById": 1,
+     *   "assigneeIds": [1, 2],
+     *   "notificationType": "PUSH",
+     *   "remindBeforeValue": 15,
+     *   "remindBeforeUnit": "MINUTES",
+     *   "repeatType": "NONE"
+     * }
+     */
+    @PostMapping(path = "/create", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public EventResponse createEventJson(@Valid @RequestBody EventRequest eventRequest) {
+        return eventService.saveOrUpdate(eventRequest, null);
+    }
+
+    /**
+     * Update event with optional image file (multipart/form-data).
+     */
     @PutMapping(path = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public EventResponse updateEvent(@Valid @RequestPart("body") EventRequest eventRequest, @RequestParam(required = false) MultipartFile file) {
+    public EventResponse updateEvent(@Valid @RequestPart("body") EventRequest eventRequest,
+                                     @RequestPart(value = "file", required = false) MultipartFile file) {
         return eventService.saveOrUpdate(eventRequest, file);
+    }
+
+    /**
+     * Update event with plain JSON (application/json) — no file upload.
+     * Must include "eventId" in the body to identify which event to update.
+     */
+    @PutMapping(path = "/update", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public EventResponse updateEventJson(@Valid @RequestBody EventRequest eventRequest) {
+        return eventService.saveOrUpdate(eventRequest, null);
     }
 
     @GetMapping("/{eventId}")

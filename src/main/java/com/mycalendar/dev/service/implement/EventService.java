@@ -16,6 +16,7 @@ import com.mycalendar.dev.repository.CustomEventRepository;
 import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
+import com.mycalendar.dev.service.IActivityLogService;
 import com.mycalendar.dev.service.IEventService;
 import com.mycalendar.dev.util.FileHandler;
 import io.micrometer.common.lang.Nullable;
@@ -38,12 +39,16 @@ public class EventService implements IEventService {
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final CustomEventRepository customEventRepository;
+    private final IActivityLogService activityLogService;
 
-    public EventService(GroupRepository groupRepository, UserRepository userRepository, EventRepository eventRepository, CustomEventRepository customEventRepository) {
+    public EventService(GroupRepository groupRepository, UserRepository userRepository,
+                        EventRepository eventRepository, CustomEventRepository customEventRepository,
+                        IActivityLogService activityLogService) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.eventRepository = eventRepository;
         this.customEventRepository = customEventRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -83,15 +88,27 @@ public class EventService implements IEventService {
             throw new IllegalArgumentException("End date must be after start date");
         }
 
-        // 5) calculate notification time from remindBeforeMinutes
-        // If remindBeforeMinutes is provided, always recalculate notificationTime (overrides manual value)
-        if (request.getRemindBeforeMinutes() != null && request.getStartDate() != null) {
+        // 5) Auto-calculate remindBeforeMinutes from remindBeforeValue + remindBeforeUnit
+        //    then derive notificationTime from the total minutes offset.
+        if (request.getRemindBeforeValue() != null && request.getRemindBeforeUnit() != null
+                && request.getStartDate() != null) {
+            int totalMinutes = switch (request.getRemindBeforeUnit().toUpperCase()) {
+                case "HOURS" -> request.getRemindBeforeValue() * 60;
+                case "DAYS"  -> request.getRemindBeforeValue() * 60 * 24;
+                case "WEEKS" -> request.getRemindBeforeValue() * 60 * 24 * 7;
+                default      -> request.getRemindBeforeValue(); // MINUTES
+            };
+            request.setRemindBeforeMinutes(totalMinutes);
+            request.setNotificationTime(request.getStartDate().minusMinutes(totalMinutes));
+        } else if (request.getRemindBeforeMinutes() != null && request.getStartDate() != null) {
+            // Fallback: use remindBeforeMinutes directly
             request.setNotificationTime(request.getStartDate().minusMinutes(request.getRemindBeforeMinutes()));
         }
 
         // ✅ 6) CREATE or UPDATE
         Event event;
-        if (request.getEventId() != null) {
+        boolean isCreating = (request.getEventId() == null);
+        if (!isCreating) {
             // --- UPDATE ---
             event = eventRepository.findById(request.getEventId())
                     .orElseThrow(() -> new NotFoundException("Event", "id", request.getEventId().toString()));
@@ -120,15 +137,16 @@ public class EventService implements IEventService {
         // ✅ Reset notificationSent flag when notificationTime, startDate or remindBeforeMinutes changes
         LocalDateTime oldNotificationTime = event.getNotificationTime();
         LocalDateTime newNotificationTime = request.getNotificationTime();
-        boolean isNew = (request.getEventId() == null);
         boolean notificationChanged = newNotificationTime != null
                 && !newNotificationTime.equals(oldNotificationTime);
-        if (isNew || notificationChanged) {
+        if (isCreating || notificationChanged) {
             event.setNotificationSent(false);
         }
 
         event.setNotificationTime(newNotificationTime);
         event.setNotificationType(request.getNotificationType());
+        event.setRemindBeforeValue(request.getRemindBeforeValue());
+        event.setRemindBeforeUnit(request.getRemindBeforeUnit());
         event.setRemindBeforeMinutes(request.getRemindBeforeMinutes());
 
         // ✅ Repeat fields
@@ -142,7 +160,7 @@ public class EventService implements IEventService {
         event.setPriority(request.getPriority());
         event.setPinned(request.getPinned());
         event.setAllDay(request.getAllDay());
-        if (request.getEventId() == null) {
+        if (isCreating) {
             event.setUsers(participants);
         }
 
@@ -161,6 +179,17 @@ public class EventService implements IEventService {
 
         // 9) save and return
         Event saved = eventRepository.save(event);
+
+        // Record activity log
+        String actionType = isCreating ? "EVENT_CREATED" : "EVENT_UPDATED";
+        activityLogService.record(
+                saved.getGroup().getGroupId(),
+                creator.getUserId(),
+                actionType,
+                saved.getEventId(), saved.getTitle(),
+                null, null
+        );
+
         return EventMapper.mapToDto(saved);
     }
 
@@ -225,15 +254,21 @@ public class EventService implements IEventService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
 
-        if (event.getCreateById().equals(userId)) {
-            throw new IllegalArgumentException("Cannot delete event created by yourself");
-        }
-
         Group group = event.getGroup();
 
+        // Only group members can delete an event
         if (group.getUserGroups().stream().noneMatch(ug -> ug.getUser().getUserId().equals(userId))) {
             throw new IllegalArgumentException("User is not a member of the group");
         }
+
+        // Record activity log before deleting (snapshot title while entity still exists)
+        activityLogService.record(
+                group.getGroupId(),
+                userId,
+                "EVENT_DELETED",
+                event.getEventId(), event.getTitle(),
+                null, null
+        );
 
         eventRepository.delete(event);
     }
