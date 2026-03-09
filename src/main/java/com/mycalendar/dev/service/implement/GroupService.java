@@ -17,6 +17,7 @@ import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.PermissionRepository;
 import com.mycalendar.dev.repository.UserGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
+import com.mycalendar.dev.service.IActivityLogService;
 import com.mycalendar.dev.service.IGroupService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -31,12 +32,16 @@ public class GroupService implements IGroupService {
     private final PermissionRepository permissionRepository;
     private final GroupRepository groupRepository;
     private final UserGroupRepository userGroupRepository;
+    private final IActivityLogService activityLogService;
 
-    public GroupService(UserRepository userRepository, PermissionRepository permissionRepository, GroupRepository groupRepository, UserGroupRepository userGroupRepository) {
+    public GroupService(UserRepository userRepository, PermissionRepository permissionRepository,
+                        GroupRepository groupRepository, UserGroupRepository userGroupRepository,
+                        IActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.permissionRepository = permissionRepository;
         this.groupRepository = groupRepository;
         this.userGroupRepository = userGroupRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -58,6 +63,15 @@ public class GroupService implements IGroupService {
         userGroup.setGroup(group);
         userGroup.setPermission(adminPermission);
         userGroupRepository.save(userGroup);
+
+        // Record activity: group created
+        activityLogService.record(
+                group.getGroupId(),
+                creator.getUserId(),
+                "GROUP_CREATED",
+                null, null,
+                null, null
+        );
     }
 
     @Override
@@ -118,6 +132,17 @@ public class GroupService implements IGroupService {
         userGroup.setPermission(permission);
 
         userGroupRepository.save(userGroup);
+
+        // Record activity: member added
+        // actorId — the person who performed the add (use request.getActorId() if present, else the added user)
+        Long actorId = (request.getActorId() != null) ? request.getActorId() : user.getUserId();
+        activityLogService.record(
+                group.getGroupId(),
+                actorId,
+                "MEMBER_ADDED",
+                null, null,
+                user.getUserId(), user.getName()
+        );
     }
 
     @Transactional
@@ -131,7 +156,17 @@ public class GroupService implements IGroupService {
         UserGroup userGroup = userGroupRepository.findByUserUserIdAndGroupGroupId(userId, groupId)
                 .orElseThrow(() -> new NotFoundException("UserGroup", "user/group", userId + "/" + groupId));
 
+        User removedUser = userGroup.getUser();
         userGroupRepository.delete(userGroup);
+
+        // Record activity: member removed
+        activityLogService.record(
+                groupId,
+                userId,
+                "MEMBER_REMOVED",
+                null, null,
+                removedUser.getUserId(), removedUser.getName()
+        );
     }
 
     @Transactional
@@ -151,6 +186,15 @@ public class GroupService implements IGroupService {
         if (!isAdmin) {
             throw new ForbiddenException("You do not have permission to delete this group");
         }
+
+        // Record activity before deleting (while group entity still exists)
+        activityLogService.record(
+                groupId,
+                requestUserId,
+                "GROUP_DELETED",
+                null, null,
+                null, null
+        );
 
         groupRepository.delete(group);
     }
