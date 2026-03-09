@@ -144,7 +144,7 @@ public class EventService implements IEventService {
         }
 
         event.setNotificationTime(newNotificationTime);
-        event.setNotificationType(request.getNotificationType());
+        event.setNotificationType("PUSH"); // Only PUSH is supported
         event.setRemindBeforeValue(request.getRemindBeforeValue());
         event.setRemindBeforeUnit(request.getRemindBeforeUnit());
         event.setRemindBeforeMinutes(request.getRemindBeforeMinutes());
@@ -180,14 +180,22 @@ public class EventService implements IEventService {
         // 9) save and return
         Event saved = eventRepository.save(event);
 
-        // Record activity log
+        // Record activity log.
+        // Skip push notification when the creator is the sole assignee on a new event
+        // — there is no one else to notify.
         String actionType = isCreating ? "EVENT_CREATED" : "EVENT_UPDATED";
+        boolean onlyCreator = isCreating
+                && (participants.isEmpty()
+                    || (participants.size() == 1
+                        && participants.iterator().next().getUserId().equals(creator.getUserId())));
+
         activityLogService.record(
                 saved.getGroup().getGroupId(),
                 creator.getUserId(),
                 actionType,
                 saved.getEventId(), saved.getTitle(),
-                null, null
+                null, null,
+                onlyCreator   // skipActivityPush
         );
 
         return EventMapper.mapToDto(saved);
@@ -267,7 +275,8 @@ public class EventService implements IEventService {
                 userId,
                 "EVENT_DELETED",
                 event.getEventId(), event.getTitle(),
-                null, null
+                null, null,
+                false  // always notify group members when an event is deleted
         );
 
         eventRepository.delete(event);

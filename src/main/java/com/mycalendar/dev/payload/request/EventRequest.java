@@ -28,7 +28,7 @@ public class EventRequest {
     // ===== Notification =====
     /** notificationTime is auto-calculated from remindBeforeValue+remindBeforeUnit if not provided explicitly */
     private LocalDateTime notificationTime;
-    private String notificationType; // PUSH, EMAIL, POPUP
+    // notificationType is always PUSH — field removed from request
     /**
      * Numeric value of how far before the event to send the notification.
      * e.g. 15 (minutes), 2 (hours), 1 (day), 1 (week)

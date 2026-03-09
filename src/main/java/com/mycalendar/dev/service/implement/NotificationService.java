@@ -65,41 +65,32 @@ public class NotificationService implements INotificationService {
     }
     
     /**
-     * Process notification for a single event
+     * Process notification for a single event.
+     * Always sends a PUSH notification — only PUSH is supported.
      */
     private void processEventNotification(Event event) {
-        String notificationType = event.getNotificationType();
         Set<User> users = event.getUsers();
-        
+
         if (users == null || users.isEmpty()) {
             log.warn("Event {} has no assigned users, skipping notification", event.getEventId());
             return;
         }
-        
+
         for (User user : users) {
-            // Check if notification has already been sent
+            // Skip if already sent to this user for this event
             if (notificationLogRepository.existsByEventIdAndUserIdAndNotificationType(
-                    event.getEventId(), user.getUserId(), notificationType)) {
-                log.debug("Notification already sent for event {} to user {}", 
+                    event.getEventId(), user.getUserId(), "PUSH")) {
+                log.debug("Push notification already sent for event {} to user {}",
                         event.getEventId(), user.getUserId());
                 continue;
             }
-            
-            boolean success = false;
-            
-            if ("PUSH".equals(notificationType)) {
-                success = sendPushNotification(event, user);
-            } else if ("EMAIL".equals(notificationType)) {
-                // TODO: Implement email notification
-                log.info("📧 Email notification for event {} to user {} (not implemented yet)", 
-                        event.getEventId(), user.getUserId());
-                success = true; // Mark as success for now
-            }
-            
+
+            boolean success = sendPushNotification(event, user);
+
             NotificationLog logEntry = new NotificationLog(
                     event.getEventId(),
                     user.getUserId(),
-                    notificationType,
+                    "PUSH",
                     success ? "SENT" : "FAILED"
             );
             notificationLogRepository.save(logEntry);

@@ -35,15 +35,19 @@ public class ActivityLogService implements IActivityLogService {
     private final ExpoPushService expoPushService;
 
     /**
-     * Record an activity entry and broadcast a push notification
+     * Record an activity entry and optionally broadcast a push notification
      * to all group members (except the actor who triggered the action).
+     *
+     * Pass skipActivityPush=true when the creator is the only assignee —
+     * no one else needs to be notified about the event creation.
      */
     @Override
     @Transactional
     public void record(Long groupId, Long actorId,
                        String actionType,
                        Long eventId, String eventTitle,
-                       Long targetUserId, String targetUserName) {
+                       Long targetUserId, String targetUserName,
+                       boolean skipActivityPush) {
 
         // Resolve actor name (snapshot so it stays correct even if user renames later)
         String actorName = "Unknown";
@@ -56,7 +60,7 @@ public class ActivityLogService implements IActivityLogService {
             log.warn("Could not resolve actor name for userId={}", actorId);
         }
 
-        // Save activity log
+        // Save activity log (always recorded regardless of skipActivityPush)
         ActivityLog activityLog = new ActivityLog();
         activityLog.setGroupId(groupId);
         activityLog.setActorId(actorId);
@@ -68,6 +72,12 @@ public class ActivityLogService implements IActivityLogService {
         activityLog.setTargetUserId(targetUserId);
         activityLog.setTargetUserName(targetUserName);
         activityLogRepository.save(activityLog);
+
+        // Skip push when creator is the only assignee (no one else to notify)
+        if (skipActivityPush) {
+            log.debug("⏭️ Skipping activity push for {} — creator is the only assignee", actionType);
+            return;
+        }
 
         // Send push notification to all group members (except the actor)
         sendActivityPushNotification(groupId, actorId, actorName,

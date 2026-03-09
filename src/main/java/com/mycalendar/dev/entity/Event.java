@@ -35,7 +35,7 @@ public class Event {
     private Double longitude;
 
     private LocalDateTime notificationTime; // Notification time setting
-    private String notificationType; // POPUP, EMAIL, PUSH
+    private String notificationType = "PUSH"; // Only PUSH is supported
     private Integer remindBeforeValue;  // Numeric value of the remind offset (e.g. 15, 2, 1)
     private String remindBeforeUnit;    // Unit of the offset: MINUTES, HOURS, DAYS, WEEKS
     // Computed field kept for backward-compat: total minutes = remindBeforeValue converted to minutes

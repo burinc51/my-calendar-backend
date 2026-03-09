@@ -8,19 +8,22 @@ public interface IActivityLogService {
     /**
      * Record a new activity in the log.
      *
-     * @param groupId       Group that the activity belongs to
-     * @param actorId       User who performed the action
-     * @param actionType    One of: EVENT_CREATED, EVENT_UPDATED, EVENT_DELETED,
-     *                      MEMBER_ADDED, MEMBER_REMOVED, GROUP_CREATED, GROUP_UPDATED, GROUP_DELETED
-     * @param eventId       Event involved (nullable)
-     * @param eventTitle    Snapshot of the event title (nullable)
-     * @param targetUserId  Target user for MEMBER_* actions (nullable)
-     * @param targetUserName Snapshot of the target user's name (nullable)
+     * @param groupId           Group that the activity belongs to
+     * @param actorId           User who performed the action
+     * @param actionType        One of: EVENT_CREATED, EVENT_UPDATED, EVENT_DELETED,
+     *                          MEMBER_ADDED, MEMBER_REMOVED, GROUP_CREATED, GROUP_UPDATED, GROUP_DELETED
+     * @param eventId           Event involved (nullable)
+     * @param eventTitle        Snapshot of the event title (nullable)
+     * @param targetUserId      Target user for MEMBER_* actions (nullable)
+     * @param targetUserName    Snapshot of the target user's name (nullable)
+     * @param skipActivityPush  When true, save the log but do NOT send a push notification.
+     *                          Used when creator is the only assignee — no one else needs to be notified.
      */
     void record(Long groupId, Long actorId,
                 String actionType,
                 Long eventId, String eventTitle,
-                Long targetUserId, String targetUserName);
+                Long targetUserId, String targetUserName,
+                boolean skipActivityPush);
 
     /**
      * Get a paginated activity feed for a specific group.

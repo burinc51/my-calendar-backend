@@ -70,7 +70,8 @@ public class GroupService implements IGroupService {
                 creator.getUserId(),
                 "GROUP_CREATED",
                 null, null,
-                null, null
+                null, null,
+                false
         );
     }
 
@@ -141,7 +142,8 @@ public class GroupService implements IGroupService {
                 actorId,
                 "MEMBER_ADDED",
                 null, null,
-                user.getUserId(), user.getName()
+                user.getUserId(), user.getName(),
+                false
         );
     }
 
@@ -165,7 +167,8 @@ public class GroupService implements IGroupService {
                 userId,
                 "MEMBER_REMOVED",
                 null, null,
-                removedUser.getUserId(), removedUser.getName()
+                removedUser.getUserId(), removedUser.getName(),
+                false
         );
     }
 
@@ -193,7 +196,8 @@ public class GroupService implements IGroupService {
                 requestUserId,
                 "GROUP_DELETED",
                 null, null,
-                null, null
+                null, null,
+                false
         );
 
         groupRepository.delete(group);
