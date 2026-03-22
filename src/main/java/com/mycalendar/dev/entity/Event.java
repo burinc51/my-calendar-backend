@@ -43,8 +43,8 @@ public class Event {
 
     private String repeatType; // NONE, DAILY, WEEKLY, MONTHLY, YEARLY, CUSTOM
     private LocalDateTime repeatUntil; // Repeat end date
-    private Integer repeatInterval; // ทำซ้ำทุกกี่หน่วย (เช่น ทุก 2 สัปดาห์) default = 1
-    private String repeatDays; // วันที่ทำซ้ำ สำหรับ CUSTOM/WEEKLY เช่น "MON,WED,FRI"
+    private Integer repeatInterval; // Repeat every N units (for example, every 2 weeks), default = 1
+    private String repeatDays; // Repeat days for CUSTOM/WEEKLY, for example "MON,WED,FRI"
 
     private String color;
     private String category;

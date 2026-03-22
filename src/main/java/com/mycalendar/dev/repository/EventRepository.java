@@ -14,34 +14,34 @@ import java.util.List;
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query(value = """
-            SELECT e.event_id              AS eventId,
-                   e.title                 AS title,
-                   e.description           AS description,
-                   e.start_date            AS startDate,
-                   e.end_date              AS endDate,
-                   e.location              AS location,
-                   e.latitude              AS latitude,
-                   e.longitude             AS longitude,
-                   e.notification_time     AS notificationTime,
-                   e.notification_type     AS notificationType,
-                   e.remind_before_value   AS remindBeforeValue,
-                   e.remind_before_unit    AS remindBeforeUnit,
-                   e.remind_before_minutes AS remindBeforeMinutes,
-                   e.repeat_type           AS repeatType,
-                   e.repeat_until          AS repeatUntil,
-                   e.repeat_interval       AS repeatInterval,
-                   e.repeat_days           AS repeatDays,
-                   e.color                 AS color,
-                   e.category              AS category,
-                   e.priority              AS priority,
-                   e.pinned                AS pinned,
-                   e.image_url             AS imageUrl,
-                   e.group_id              AS groupId,
-                   u.user_id               AS userId,
-                   u.username              AS username,
-                   u.name                  AS name,
-                   e.create_by_id          AS createById,
-                   e.all_day               AS allDay
+            SELECT e.event_id,
+                   e.title,
+                   e.description,
+                   e.start_date,
+                   e.end_date,
+                   e.location,
+                   e.latitude,
+                   e.longitude,
+                   e.notification_time,
+                   e.notification_type,
+                   e.remind_before_value,
+                   e.remind_before_unit,
+                   e.remind_before_minutes,
+                   e.repeat_type,
+                   e.repeat_until,
+                   e.repeat_interval,
+                   e.repeat_days,
+                   e.color,
+                   e.category,
+                   e.priority,
+                   e.pinned,
+                   e.image_url,
+                   e.group_id,
+                   u.user_id,
+                   u.username,
+                   u.name,
+                   e.create_by_id,
+                   e.all_day
             FROM (SELECT e2.*
                   FROM events e2
                   WHERE e2.group_id = :groupId
@@ -59,36 +59,35 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             """, nativeQuery = true)
     long countEventsByGroupId(@Param("groupId") Long groupId);
 
-
     @Query(value = """
-            SELECT e.event_id              AS eventId,
-                   e.title                 AS title,
-                   e.description           AS description,
-                   e.start_date            AS startDate,
-                   e.end_date              AS endDate,
-                   e.location              AS location,
-                   e.latitude              AS latitude,
-                   e.longitude             AS longitude,
-                   e.notification_time     AS notificationTime,
-                   e.notification_type     AS notificationType,
-                   e.remind_before_value   AS remindBeforeValue,
-                   e.remind_before_unit    AS remindBeforeUnit,
-                   e.remind_before_minutes AS remindBeforeMinutes,
-                   e.repeat_type           AS repeatType,
-                   e.repeat_until          AS repeatUntil,
-                   e.repeat_interval       AS repeatInterval,
-                   e.repeat_days           AS repeatDays,
-                   e.color                 AS color,
-                   e.category              AS category,
-                   e.priority              AS priority,
-                   e.pinned                AS pinned,
-                   e.image_url             AS imageUrl,
-                   e.group_id              AS groupId,
-                   u.user_id               AS userId,
-                   u.username              AS username,
-                   u.name                  AS name,
-                   e.create_by_id          AS createById,
-                   e.all_day               AS allDay
+            SELECT e.event_id,
+                   e.title,
+                   e.description,
+                   e.start_date,
+                   e.end_date,
+                   e.location,
+                   e.latitude,
+                   e.longitude,
+                   e.notification_time,
+                   e.notification_type,
+                   e.remind_before_value,
+                   e.remind_before_unit,
+                   e.remind_before_minutes,
+                   e.repeat_type,
+                   e.repeat_until,
+                   e.repeat_interval,
+                   e.repeat_days,
+                   e.color,
+                   e.category,
+                   e.priority,
+                   e.pinned,
+                   e.image_url,
+                   e.group_id,
+                   u.user_id,
+                   u.username,
+                   u.name,
+                   e.create_by_id,
+                   e.all_day
             FROM (SELECT e2.*
                   FROM events e2
                   ORDER BY e2.event_id LIMIT :#{#pageable.pageSize}
@@ -105,14 +104,13 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             """, nativeQuery = true)
     long countAllEvents();
 
-
     @Query(value = """
-            SELECT e.event_id   AS eventId,
-                   e.title      AS title,
-                   e.start_date AS startDate,
-                   e.end_date   AS endDate,
-                   e.color      AS color,
-                   e.all_day    AS allDay
+            SELECT e.event_id,
+                   e.title,
+                   e.start_date,
+                   e.end_date,
+                   e.color,
+                   e.all_day
             FROM events e
             WHERE e.start_date >= to_date(:startMonth || '-01', 'YYYY-MM-DD')
               AND e.start_date <= (to_date(:endMonth || '-01', 'YYYY-MM-DD') + INTERVAL '1 month' - INTERVAL '1 day')
@@ -157,4 +155,28 @@ public interface EventRepository extends JpaRepository<Event, Long> {
               AND (e.repeat_until IS NULL OR e.repeat_until > :now)
             """, nativeQuery = true)
     List<Event> findRecurringEventsToReschedule(@Param("now") LocalDateTime now);
+
+    /**
+     * Get events whose notification time falls within a day window.
+     * - includeSent=false => only pending notifications
+     * - includeSent=true  => include both pending and already sent
+     * - groupId optional for group-scoped checks
+     */
+    @Query(value = """
+            SELECT e.*
+            FROM events e
+            WHERE e.notification_time IS NOT NULL
+              AND e.notification_time >= :fromDateTime
+              AND e.notification_time < :toDateTime
+              AND (:groupId IS NULL OR e.group_id = :groupId)
+              AND (:includeSent = true OR e.notification_sent = false)
+            ORDER BY e.notification_time ASC
+            """, nativeQuery = true)
+    List<Event> findNotificationScheduleByDate(
+            @Param("fromDateTime") LocalDateTime fromDateTime,
+            @Param("toDateTime") LocalDateTime toDateTime,
+            @Param("includeSent") boolean includeSent,
+            @Param("groupId") Long groupId
+    );
 }
+

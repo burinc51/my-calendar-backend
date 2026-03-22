@@ -1,5 +1,6 @@
 package com.mycalendar.dev.controller.v1;
 
+import com.mycalendar.dev.payload.request.ExpoTestNotificationRequest;
 import com.mycalendar.dev.payload.request.PushTokenRequest;
 import com.mycalendar.dev.service.INotificationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -79,6 +80,34 @@ public class PushTokenController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Notification job executed"
+        ));
+    }
+
+    /**
+     * Test endpoint for sending a direct Expo push notification.
+     */
+    @PostMapping("/test-send")
+    @Operation(summary = "Send test Expo push", description = "Send a direct test push notification to a specific Expo token")
+    public ResponseEntity<Map<String, Object>> sendTestPush(@Valid @RequestBody ExpoTestNotificationRequest request) {
+        log.info("🧪 Sending test Expo push notification");
+
+        boolean success = notificationService.sendTestPushNotification(
+                request.getToken(),
+                request.getTitle(),
+                request.getBody(),
+                request.getData()
+        );
+
+        if (!success) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Failed to send push notification. Please check Expo token and try again."
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Test push notification sent successfully"
         ));
     }
 }

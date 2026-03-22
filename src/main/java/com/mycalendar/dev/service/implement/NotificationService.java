@@ -4,7 +4,9 @@ import com.mycalendar.dev.entity.Event;
 import com.mycalendar.dev.entity.NotificationLog;
 import com.mycalendar.dev.entity.PushToken;
 import com.mycalendar.dev.entity.User;
+import com.mycalendar.dev.mapper.EventMapper;
 import com.mycalendar.dev.payload.request.PushTokenRequest;
+import com.mycalendar.dev.payload.response.event.EventResponse;
 import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.NotificationLogRepository;
 import com.mycalendar.dev.repository.PushTokenRepository;
@@ -16,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +30,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationService implements INotificationService {
+
+    private static final ZoneId APP_ZONE = ZoneId.of("Asia/Bangkok");
     
     private final EventRepository eventRepository;
     private final PushTokenRepository pushTokenRepository;
@@ -52,16 +58,29 @@ public class NotificationService implements INotificationService {
         }
         
         log.info("📋 Found {} events to notify", eventsToNotify.size());
-        
+
+        List<Event> processedEvents = new java.util.ArrayList<>();
+
         for (Event event : eventsToNotify) {
+            // Guard against delete race: event could be removed after the initial query.
+            if (!eventRepository.existsById(event.getEventId())) {
+                log.info("⏭️ Skip notification for deleted event {}", event.getEventId());
+                continue;
+            }
+
             processEventNotification(event);
-            
-            // Mark event as notified
-            event.setNotificationSent(true);
+
+            // Mark as notified only if event still exists after processing.
+            if (eventRepository.existsById(event.getEventId())) {
+                event.setNotificationSent(true);
+                processedEvents.add(event);
+            }
         }
-        
-        // Batch save all processed events
-        eventRepository.saveAll(eventsToNotify);
+
+        // Batch save only events that were still present at update time.
+        if (!processedEvents.isEmpty()) {
+            eventRepository.saveAll(processedEvents);
+        }
     }
     
     /**
@@ -280,6 +299,19 @@ public class NotificationService implements INotificationService {
         return current.plusWeeks(interval);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventResponse> getNotificationScheduleByDate(LocalDate date, boolean includeSent, Long groupId) {
+        LocalDate targetDate = (date != null) ? date : LocalDate.now(APP_ZONE);
+        LocalDateTime fromDateTime = targetDate.atStartOfDay();
+        LocalDateTime toDateTime = targetDate.plusDays(1).atStartOfDay();
+
+        return eventRepository.findNotificationScheduleByDate(fromDateTime, toDateTime, includeSent, groupId)
+                .stream()
+                .map(EventMapper::mapToDto)
+                .toList();
+    }
+
     /**
      * Register Push Token
      */
@@ -311,6 +343,24 @@ public class NotificationService implements INotificationService {
     public void unregisterPushToken(String token) {
         pushTokenRepository.deleteByToken(token);
         log.info("🗑️ Push token unregistered: {}", maskToken(token));
+    }
+
+    @Override
+    public boolean sendTestPushNotification(String token, String title, String body, Map<String, Object> data) {
+        Map<String, Object> payload = new HashMap<>();
+        if (data != null) {
+            payload.putAll(data);
+        }
+        payload.putIfAbsent("type", "manual_test");
+        payload.putIfAbsent("sentAt", LocalDateTime.now().toString());
+
+        boolean success = expoPushService.sendPushNotification(token, title, body, payload);
+        if (success) {
+            log.info("✅ Test push notification sent to token: {}", maskToken(token));
+        } else {
+            log.warn("❌ Failed to send test push notification to token: {}", maskToken(token));
+        }
+        return success;
     }
     
     /**

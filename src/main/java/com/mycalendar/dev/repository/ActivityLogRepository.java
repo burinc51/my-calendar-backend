@@ -17,7 +17,7 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
     Page<ActivityLog> findByGroupIdOrderByCreatedAtDesc(Long groupId, Pageable pageable);
 
     /**
-     * Fetch logs for all groups that a user belongs to (personal feed — sees everyone's actions).
+     * Fetch logs for all groups that a user belongs to (personal feed - sees everyone's actions).
      */
     @Query("""
             SELECT a FROM ActivityLog a
