@@ -45,12 +45,43 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             FROM (SELECT e2.*
                   FROM events e2
                   WHERE e2.group_id = :groupId
-                  ORDER BY e2.event_id LIMIT :#{#pageable.pageSize}
+                  ORDER BY
+                    CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'ASC' THEN e2.event_id END ASC,
+                    CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'DESC' THEN e2.event_id END DESC,
+                    CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'ASC' THEN e2.start_date END ASC,
+                    CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'DESC' THEN e2.start_date END DESC,
+                    CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'ASC' THEN e2.end_date END ASC,
+                    CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'DESC' THEN e2.end_date END DESC,
+                    CASE WHEN :sortBy = 'title' AND :sortOrder = 'ASC' THEN e2.title END ASC,
+                    CASE WHEN :sortBy = 'title' AND :sortOrder = 'DESC' THEN e2.title END DESC,
+                    e2.event_id DESC
+                  LIMIT :#{#pageable.pageSize}
                   OFFSET :#{#pageable.offset}) e
                      LEFT JOIN event_user eu ON e.event_id = eu.event_id
                      LEFT JOIN users u ON u.user_id = eu.user_id
-            """, nativeQuery = true)
-    Page<EventProjection> findAllByGroupId(@Param("groupId") Long groupId, Pageable pageable);
+            ORDER BY
+                CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'ASC' THEN e.event_id END ASC,
+                CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'DESC' THEN e.event_id END DESC,
+                CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'ASC' THEN e.start_date END ASC,
+                CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'DESC' THEN e.start_date END DESC,
+                CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'ASC' THEN e.end_date END ASC,
+                CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'DESC' THEN e.end_date END DESC,
+                CASE WHEN :sortBy = 'title' AND :sortOrder = 'ASC' THEN e.title END ASC,
+                CASE WHEN :sortBy = 'title' AND :sortOrder = 'DESC' THEN e.title END DESC,
+                e.event_id DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM events e
+            WHERE e.group_id = :groupId
+              AND (:sortBy IS NULL OR :sortBy IS NOT NULL)
+              AND (:sortOrder IS NULL OR :sortOrder IS NOT NULL)
+            """,
+            nativeQuery = true)
+    Page<EventProjection> findAllByGroupId(@Param("groupId") Long groupId,
+                                           Pageable pageable,
+                                           @Param("sortBy") String sortBy,
+                                           @Param("sortOrder") String sortOrder);
 
     @Query(value = """
             SELECT COUNT(*)
@@ -90,13 +121,34 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                    e.all_day
             FROM (SELECT e2.*
                   FROM events e2
-                  ORDER BY e2.event_id LIMIT :#{#pageable.pageSize}
+                  ORDER BY
+                    CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'ASC' THEN e2.event_id END ASC,
+                    CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'DESC' THEN e2.event_id END DESC,
+                    CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'ASC' THEN e2.start_date END ASC,
+                    CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'DESC' THEN e2.start_date END DESC,
+                    CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'ASC' THEN e2.end_date END ASC,
+                    CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'DESC' THEN e2.end_date END DESC,
+                    CASE WHEN :sortBy = 'title' AND :sortOrder = 'ASC' THEN e2.title END ASC,
+                    CASE WHEN :sortBy = 'title' AND :sortOrder = 'DESC' THEN e2.title END DESC,
+                    e2.event_id DESC
+                  LIMIT :#{#pageable.pageSize}
                   OFFSET :#{#pageable.offset}) e
                      LEFT JOIN event_user eu ON e.event_id = eu.event_id
                      LEFT JOIN users u ON u.user_id = eu.user_id
-            ORDER BY e.event_id
+            ORDER BY
+                CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'ASC' THEN e.event_id END ASC,
+                CASE WHEN :sortBy = 'eventId' AND :sortOrder = 'DESC' THEN e.event_id END DESC,
+                CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'ASC' THEN e.start_date END ASC,
+                CASE WHEN :sortBy = 'startDate' AND :sortOrder = 'DESC' THEN e.start_date END DESC,
+                CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'ASC' THEN e.end_date END ASC,
+                CASE WHEN :sortBy = 'endDate' AND :sortOrder = 'DESC' THEN e.end_date END DESC,
+                CASE WHEN :sortBy = 'title' AND :sortOrder = 'ASC' THEN e.title END ASC,
+                CASE WHEN :sortBy = 'title' AND :sortOrder = 'DESC' THEN e.title END DESC,
+                e.event_id DESC
             """, nativeQuery = true)
-    List<EventProjection> findAllEvents(Pageable pageable);
+    List<EventProjection> findAllEvents(Pageable pageable,
+                                        @Param("sortBy") String sortBy,
+                                        @Param("sortOrder") String sortOrder);
 
     @Query(value = """
             SELECT COUNT(*)

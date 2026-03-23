@@ -22,12 +22,14 @@ import com.mycalendar.dev.util.FileHandler;
 import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -284,8 +286,11 @@ public class EventService implements IEventService {
 
     @Override
     public PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request) {
-        Pageable pageable = request.getPageRequest();
-        Page<EventProjection> pages = eventRepository.findAllByGroupId(groupId, pageable);
+        Pageable pageable = PageRequest.of(Math.max(0, request.getPageNumber() - 1), request.getPageSize());
+        String sortBy = normalizeSortBy(request.getSortBy());
+        String sortOrder = normalizeSortOrder(request.getSortOrder());
+
+        Page<EventProjection> pages = eventRepository.findAllByGroupId(groupId, pageable, sortBy, sortOrder);
         long totalElements = eventRepository.countEventsByGroupId(groupId);
 
         List<EventResponse> content = EventMapper.mapRowsMergedFromProjection(pages.getContent());
@@ -302,9 +307,11 @@ public class EventService implements IEventService {
 
     @Override
     public PaginationResponse<EventResponse> getAllEvent(PaginationRequest request) {
-        Pageable pageable = request.getPageRequest();
+        Pageable pageable = PageRequest.of(Math.max(0, request.getPageNumber() - 1), request.getPageSize());
+        String sortBy = normalizeSortBy(request.getSortBy());
+        String sortOrder = normalizeSortOrder(request.getSortOrder());
 
-        List<EventProjection> projections = eventRepository.findAllEvents(pageable);
+        List<EventProjection> projections = eventRepository.findAllEvents(pageable, sortBy, sortOrder);
         long totalElements = eventRepository.countAllEvents();
 
         List<EventResponse> content = EventMapper.mapRowsMergedFromProjection(projections);
@@ -336,5 +343,27 @@ public class EventService implements IEventService {
                         .allDay(v.getAllDay())
                         .build()
         ).toList();
+    }
+
+    private String normalizeSortBy(String rawSortBy) {
+        if (rawSortBy == null || rawSortBy.isBlank()) {
+            return "eventId";
+        }
+
+        return switch (rawSortBy.trim().toLowerCase(Locale.ROOT)) {
+            case "id", "eventid", "event_id" -> "eventId";
+            case "startdate", "start_date" -> "startDate";
+            case "enddate", "end_date" -> "endDate";
+            case "title" -> "title";
+            default -> "eventId";
+        };
+    }
+
+    private String normalizeSortOrder(String rawSortOrder) {
+        if (rawSortOrder == null || rawSortOrder.isBlank()) {
+            return "DESC";
+        }
+
+        return rawSortOrder.trim().equalsIgnoreCase("ASC") ? "ASC" : "DESC";
     }
 }
