@@ -10,23 +10,47 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.HashMap;
+
 public class GroupMapper {
 
     public GroupMapper() {
         throw new IllegalStateException("Mapper Class");
     }
 
+    private static final Map<Long, String> USER_AVATAR_COLORS = new HashMap<>();
+
+    static {
+        USER_AVATAR_COLORS.put(1L, "#c084fc");
+        USER_AVATAR_COLORS.put(2L, "#818cf8");
+        USER_AVATAR_COLORS.put(3L, "#14b8a6");
+        USER_AVATAR_COLORS.put(4L, "#f97316");
+        USER_AVATAR_COLORS.put(5L, "#ec4899");
+    }
+
+    private static String getInitialText(String name) {
+        if (name == null || name.isEmpty()) {
+            return "?";
+        }
+        return name.substring(0, 1).toUpperCase();
+    }
+
+    private static String getAvatarColor(Long userId) {
+        return USER_AVATAR_COLORS.getOrDefault(userId, "#94a3b8");
+    }
+
     public static GroupResponse mapToDto(Group group) {
         return GroupResponse.builder()
                 .groupId(group.getGroupId())
                 .groupName(group.getGroupName())
-                .description(group.getDescription())
+                .icon(group.getIcon())
+                .color(group.getColor())
+                .bg(group.getBg())
                 .members(group.getUserGroups().stream().map(
                         v -> GroupMemberResponse.builder()
                                 .userId(v.getUser().getUserId())
-                                .name(v.getUser().getName())
-                                .username(v.getUser().getUsername())
-                                .role(v.getPermission().getPermissionName())
+                                .initialText(getInitialText(v.getUser().getName()))
+                                .avatarColor(getAvatarColor(v.getUser().getUserId()))
                                 .picture_url(v.getUser().getPictureUrl())
                                 .build()
                 ).toList())
@@ -44,7 +68,9 @@ public class GroupMapper {
                     GroupResponse.builder()
                             .groupId(row.getGroupId())
                             .groupName(row.getGroupName())
-                            .description(row.getDescription())
+                            .icon(row.getIcon())
+                            .color(row.getColor())
+                            .bg(row.getBg())
                             .members(new ArrayList<>())
                             .build()
             );
@@ -53,9 +79,8 @@ public class GroupMapper {
             response.members().add(
                     GroupMemberResponse.builder()
                             .userId(row.getUserId())
-                            .username(row.getUsername())
-                            .name(row.getName())
-                            .role(row.getPermissionName())
+                            .initialText(getInitialText(row.getName()))
+                            .avatarColor(getAvatarColor(row.getUserId()))
                             .picture_url(row.getPictureUrl())
                             .build()
             );

@@ -7,6 +7,12 @@ public interface GroupProjection {
 
     String getDescription();
 
+    String getIcon();
+
+    String getColor();
+
+    String getBg();
+
     Long getUserId();
 
     String getUsername();

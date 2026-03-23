@@ -22,6 +22,15 @@ public class Group {
     @Column
     private String description;
 
+    @Column(length = 50)
+    private String icon;
+
+    @Column(length = 20)
+    private String color;
+
+    @Column(name = "bg_color", length = 50)
+    private String bg;
+
     // Relationship with user (via UserGroup)
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserGroup> userGroups = new HashSet<>();

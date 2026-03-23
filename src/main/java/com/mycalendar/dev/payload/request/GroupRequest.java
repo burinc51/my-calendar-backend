@@ -9,4 +9,7 @@ public class GroupRequest {
     private String groupName;
     private String description;
     private Long creatorUserId; // user who created the group
+    private String icon;
+    private String color;
+    private String bg;
 }

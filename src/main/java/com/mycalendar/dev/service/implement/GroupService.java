@@ -53,6 +53,9 @@ public class GroupService implements IGroupService {
         Group group = new Group();
         group.setGroupName(request.getGroupName());
         group.setDescription(request.getDescription());
+        group.setIcon(request.getIcon());
+        group.setColor(request.getColor());
+        group.setBg(request.getBg());
 
         groupRepository.save(group);
 
@@ -83,6 +86,9 @@ public class GroupService implements IGroupService {
 
         group.setGroupName(request.getGroupName());
         group.setDescription(request.getDescription());
+        group.setIcon(request.getIcon());
+        group.setColor(request.getColor());
+        group.setBg(request.getBg());
 
         groupRepository.save(group);
 
@@ -164,12 +170,29 @@ public class GroupService implements IGroupService {
         return userGroupRepository.findMembersByGroupId(groupId).stream()
                 .map(v -> GroupMemberResponse.builder()
                         .userId(v.getUserId())
-                        .name(v.getName())
-                        .username(v.getUsername())
-                        .role(v.getPermissionName())
+                        .initialText(getInitialText(v.getName()))
+                        .avatarColor(getAvatarColor(v.getUserId()))
                         .picture_url(v.getPictureUrl())
                         .build())
                 .toList();
+    }
+
+    private String getInitialText(String name) {
+        if (name == null || name.isEmpty()) {
+            return "?";
+        }
+        return name.substring(0, 1).toUpperCase();
+    }
+
+    private String getAvatarColor(Long userId) {
+        return switch(Math.toIntExact(userId % 5)) {
+            case 0 -> "#c084fc";
+            case 1 -> "#818cf8";
+            case 2 -> "#14b8a6";
+            case 3 -> "#f97316";
+            case 4 -> "#ec4899";
+            default -> "#94a3b8";
+        };
     }
 
     @Override

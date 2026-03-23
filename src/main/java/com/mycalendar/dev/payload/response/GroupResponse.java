@@ -8,7 +8,9 @@ import java.util.List;
 public record GroupResponse(
         Long groupId,
         String groupName,
-        String description,
+        String icon,
+        String color,
+        String bg,
         List<GroupMemberResponse> members
 ) {
 }
