@@ -1,5 +1,6 @@
 package com.mycalendar.dev.entity;
 
+import com.mycalendar.dev.enums.PictureSource;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,6 +31,13 @@ public class User extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(name = "picture_url", length = 1000)
+    private String pictureUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "picture_source", length = 20)
+    private PictureSource pictureSource;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JoinTable(name = "user_role",

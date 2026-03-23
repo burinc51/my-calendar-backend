@@ -14,4 +14,6 @@ public interface GroupProjection {
     String getName();
 
     String getPermissionName();
+
+    String getPictureUrl();
 }

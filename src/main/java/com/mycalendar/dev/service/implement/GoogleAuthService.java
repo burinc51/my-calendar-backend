@@ -7,6 +7,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.mycalendar.dev.entity.Role;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.entity.UserSocialProvider;
+import com.mycalendar.dev.enums.PictureSource;
 import com.mycalendar.dev.enums.ProviderType;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.payload.response.AuthResponse;
@@ -68,8 +69,7 @@ public class GoogleAuthService implements IGoogleAuth {
             // Previously logged in with Google → reuse existing user
             user = userOpt.get();
 
-            // Refresh latest info from Google (optional but useful)
-            updateSocialProvider(user, googleSub, email, name, pictureUrl);
+            updateSocialProviderEmail(googleSub, email);
         } else {
             // Google account not linked yet
 
@@ -79,13 +79,15 @@ public class GoogleAuthService implements IGoogleAuth {
             if (existingUserByEmail.isPresent()) {
                 // User exists via email/password → link Google to the existing account
                 user = existingUserByEmail.get();
-                createSocialProvider(user, googleSub, email, name, pictureUrl);
+                createSocialProvider(user, googleSub, email);
             } else {
                 // 3. No existing account → create a new user
                 user = createNewUser(email, name);
-                createSocialProvider(user, googleSub, email, name, pictureUrl);
+                createSocialProvider(user, googleSub, email);
             }
         }
+
+        applyGooglePictureFirstTimeOnly(user, pictureUrl);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         // Generate JWT tokens
@@ -99,8 +101,7 @@ public class GoogleAuthService implements IGoogleAuth {
                 .username(user.getUsername())
                 .name(user.getName())
                 .email(user.getEmail())
-                // Retrieve picture from the latest social provider (Google)
-                .pictureUrl(pictureUrl)
+                .pictureUrl(user.getPictureUrl())
                 .build();
     }
 
@@ -172,27 +173,29 @@ public class GoogleAuthService implements IGoogleAuth {
         return candidate;
     }
 
-    private void createSocialProvider(User user, String providerId,
-                                      String email, String displayName, String pictureUrl) {
+    private void createSocialProvider(User user, String providerId, String email) {
         UserSocialProvider provider = new UserSocialProvider();
         provider.setUser(user);
         provider.setProvider(ProviderType.GOOGLE);
         provider.setProviderId(providerId);
         provider.setEmail(email);
-        provider.setDisplayName(displayName);
-        provider.setPictureUrl(pictureUrl);
         socialProviderRepo.save(provider);
     }
 
-    private void updateSocialProvider(User user, String providerId,
-                                      String email, String displayName, String pictureUrl) {
+    private void updateSocialProviderEmail(String providerId, String email) {
         socialProviderRepo.findByProviderAndProviderId(ProviderType.GOOGLE, providerId)
                 .ifPresent(sp -> {
-                    sp.setDisplayName(displayName);
-                    sp.setPictureUrl(pictureUrl);
                     sp.setEmail(email);
-                    // No explicit save() needed — @Transactional handles it
+                    socialProviderRepo.save(sp);
                 });
+    }
+
+    private void applyGooglePictureFirstTimeOnly(User user, String googlePictureUrl) {
+        if (user.getPictureUrl() == null && googlePictureUrl != null && !googlePictureUrl.isBlank()) {
+            user.setPictureUrl(googlePictureUrl);
+            user.setPictureSource(PictureSource.GOOGLE);
+            userRepository.save(user);
+        }
     }
 
     private GoogleIdToken.Payload verifyGoogleIdToken(String idTokenString) {

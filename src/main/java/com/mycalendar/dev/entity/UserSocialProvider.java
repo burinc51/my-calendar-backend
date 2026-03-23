@@ -29,7 +29,5 @@ public class UserSocialProvider {
     private String providerId;      // Google = sub, Facebook = facebook user id
 
     private String email;
-    private String displayName;
-    private String pictureUrl;
 
 }

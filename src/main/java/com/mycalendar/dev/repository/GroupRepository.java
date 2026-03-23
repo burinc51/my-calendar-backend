@@ -23,7 +23,8 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
                 m.userId                AS userId,
                 m.username              AS username,
                 m.name                  AS name,
-                p.permissionName        AS permissionName
+                p.permissionName        AS permissionName,
+                m.pictureUrl            AS pictureUrl
             FROM UserGroup ug
                 JOIN ug.group g
                 JOIN g.userGroups ugm

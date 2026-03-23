@@ -27,6 +27,7 @@ public class GroupMapper {
                                 .name(v.getUser().getName())
                                 .username(v.getUser().getUsername())
                                 .role(v.getPermission().getPermissionName())
+                                .picture_url(v.getUser().getPictureUrl())
                                 .build()
                 ).toList())
                 .build();
@@ -55,6 +56,7 @@ public class GroupMapper {
                             .username(row.getUsername())
                             .name(row.getName())
                             .role(row.getPermissionName())
+                            .picture_url(row.getPictureUrl())
                             .build()
             );
         }

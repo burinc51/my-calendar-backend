@@ -28,17 +28,10 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
                 u.name AS name,
                 u.username AS username,
                 p.permissionName AS permissionName,
-                usp.pictureUrl AS pictureUrl
+                u.pictureUrl AS pictureUrl
             FROM UserGroup ug
                 JOIN ug.user u
                 JOIN ug.permission p
-                LEFT JOIN UserSocialProvider usp
-                    ON usp.user.userId = u.userId
-                    AND usp.id = (
-                        SELECT MAX(usp2.id)
-                        FROM UserSocialProvider usp2
-                        WHERE usp2.user.userId = u.userId
-                    )
             WHERE ug.group.groupId = :groupId
             ORDER BY u.userId
             """)
