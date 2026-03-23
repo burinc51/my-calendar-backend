@@ -10,6 +10,7 @@ import com.mycalendar.dev.mapper.GroupMapper;
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
+import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.projection.GroupProjection;
@@ -151,6 +152,23 @@ public class GroupService implements IGroupService {
     public List<GroupResponse> getGroupsByUserId(Long userId) {
         List<GroupProjection> projections = groupRepository.findAllGroupsByUserId(userId);
         return GroupMapper.mapToDto(projections);
+    }
+
+    @Override
+    @Transactional
+    public List<GroupMemberResponse> getUsersByGroupId(Long groupId) {
+        if (!groupRepository.existsById(groupId)) {
+            throw new NotFoundException("Group", "id", groupId.toString());
+        }
+
+        return userGroupRepository.findMembersByGroupId(groupId).stream()
+                .map(v -> GroupMemberResponse.builder()
+                        .userId(v.getUser().getUserId())
+                        .name(v.getUser().getName())
+                        .username(v.getUser().getUsername())
+                        .role(v.getPermission().getPermissionName())
+                        .build())
+                .toList();
     }
 
     @Override
