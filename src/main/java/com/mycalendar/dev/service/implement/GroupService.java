@@ -163,10 +163,11 @@ public class GroupService implements IGroupService {
 
         return userGroupRepository.findMembersByGroupId(groupId).stream()
                 .map(v -> GroupMemberResponse.builder()
-                        .userId(v.getUser().getUserId())
-                        .name(v.getUser().getName())
-                        .username(v.getUser().getUsername())
-                        .role(v.getPermission().getPermissionName())
+                        .userId(v.getUserId())
+                        .name(v.getName())
+                        .username(v.getUsername())
+                        .role(v.getPermissionName())
+                        .picture_url(v.getPictureUrl())
                         .build())
                 .toList();
     }

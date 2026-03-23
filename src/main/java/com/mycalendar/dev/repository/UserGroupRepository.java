@@ -2,6 +2,7 @@ package com.mycalendar.dev.repository;
 
 import com.mycalendar.dev.entity.UserGroup;
 import com.mycalendar.dev.entity.UserGroupId;
+import com.mycalendar.dev.projection.GroupMemberProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,12 +23,24 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
     List<Long> findUserIdsByGroupId(@Param("groupId") Long groupId);
 
     @Query("""
-            SELECT ug
+            SELECT
+                u.userId AS userId,
+                u.name AS name,
+                u.username AS username,
+                p.permissionName AS permissionName,
+                usp.pictureUrl AS pictureUrl
             FROM UserGroup ug
-                JOIN FETCH ug.user u
-                JOIN FETCH ug.permission p
+                JOIN ug.user u
+                JOIN ug.permission p
+                LEFT JOIN UserSocialProvider usp
+                    ON usp.user.userId = u.userId
+                    AND usp.id = (
+                        SELECT MAX(usp2.id)
+                        FROM UserSocialProvider usp2
+                        WHERE usp2.user.userId = u.userId
+                    )
             WHERE ug.group.groupId = :groupId
             ORDER BY u.userId
             """)
-    List<UserGroup> findMembersByGroupId(@Param("groupId") Long groupId);
+    List<GroupMemberProjection> findMembersByGroupId(@Param("groupId") Long groupId);
 }

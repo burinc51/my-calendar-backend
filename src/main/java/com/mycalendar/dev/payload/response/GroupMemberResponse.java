@@ -7,6 +7,7 @@ public record GroupMemberResponse(
         Long userId,
         String name,
         String username,
-        String role
+        String role,
+        String picture_url
 ) {
 }
