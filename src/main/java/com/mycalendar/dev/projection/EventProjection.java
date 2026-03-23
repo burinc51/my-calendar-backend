@@ -58,4 +58,6 @@ public interface EventProjection {
     String getUsername();
 
     String getName();
+
+    String getUserImageUrl();
 }

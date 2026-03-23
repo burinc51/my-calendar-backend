@@ -20,6 +20,7 @@ SELECT e.event_id              AS eventId,
        u.user_id               AS userId,
        u.username              AS username,
        u.name                  AS name,
+       u.picture_url           AS userImageUrl,
        e.create_by_id          AS createById
 FROM events e
          LEFT JOIN event_user eu ON e.event_id = eu.event_id

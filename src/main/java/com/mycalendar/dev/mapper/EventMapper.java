@@ -46,7 +46,7 @@ public class EventMapper {
                 .createById(event.getCreateById())
                 .allDay(event.getAllDay())
                 .assignees(event.getUsers().stream()
-                        .map(u -> new EventUserResponse(u.getUserId(), u.getUsername(), u.getName()))
+                        .map(u -> new EventUserResponse(u.getUserId(), u.getName(), u.getUsername(), u.getPictureUrl()))
                         .toList())
                 .build();
     }
@@ -90,7 +90,7 @@ public class EventMapper {
                             .pinned(getValue(r, 16, Boolean.class))
                             .imageUrl(getValue(r, 17, String.class))
                             .groupId(getValue(r, 18, Long.class))
-                            .createById(getValue(r, 22, Long.class))
+                            .createById(getValue(r, 24, Long.class))
                             .assignees(new ArrayList<>())
                             .build()
             );
@@ -99,8 +99,9 @@ public class EventMapper {
                 if (e.assignees().stream().noneMatch(a -> a.userId().equals(((Number) r[19]).longValue()))) {
                     e.assignees().add(new EventUserResponse(
                             ((Number) r[19]).longValue(),
+                            (String) r[21],
                             (String) r[20],
-                            (String) r[21]
+                            (String) r[23]
                     ));
                 }
             }
@@ -153,8 +154,9 @@ public class EventMapper {
                 if (e.assignees().stream().noneMatch(a -> a.userId().equals(r.getUserId()))) {
                     e.assignees().add(new EventUserResponse(
                             r.getUserId(),
+                            r.getName(),
                             r.getUsername(),
-                            r.getName()
+                            r.getUserImageUrl()
                     ));
                 }
             }

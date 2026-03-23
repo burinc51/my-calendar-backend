@@ -40,6 +40,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                    u.user_id,
                    u.username,
                    u.name,
+                   u.picture_url AS userImageUrl,
                    e.create_by_id,
                    e.all_day
             FROM (SELECT e2.*
@@ -117,6 +118,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                    u.user_id,
                    u.username,
                    u.name,
+                   u.picture_url AS userImageUrl,
                    e.create_by_id,
                    e.all_day
             FROM (SELECT e2.*
