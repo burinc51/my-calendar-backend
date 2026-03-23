@@ -28,5 +28,5 @@ public interface IEventService {
 
     PaginationResponse<EventResponse> getAllEvent(PaginationRequest request);
 
-    List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate);
+    List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate, Long groupId);
 }

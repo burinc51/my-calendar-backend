@@ -109,7 +109,9 @@ public class EventRestController {
     }
 
     @GetMapping("/month-view")
-    public List<EventMonthViewResponse> getMonthView(@RequestParam String startDate, @RequestParam String endDate) {
-        return eventService.getAllEventsByMonthRange(startDate, endDate);
+    public List<EventMonthViewResponse> getMonthView(@RequestParam String startDate,
+                                                     @RequestParam String endDate,
+                                                     @RequestParam(required = false) Long groupId) {
+        return eventService.getAllEventsByMonthRange(startDate, endDate, groupId);
     }
 }

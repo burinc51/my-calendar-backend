@@ -4,6 +4,7 @@ import com.mycalendar.dev.entity.Event;
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.enums.FileType;
+import com.mycalendar.dev.exception.APIException;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.mapper.EventMapper;
 import com.mycalendar.dev.payload.request.EventRequest;
@@ -24,10 +25,14 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.HashSet;
@@ -330,8 +335,15 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate) {
-        List<EventProjection> content = eventRepository.findAllEventsByMonthRange(startDate, endDate);
+    public List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate, Long groupId) {
+        Long userId = resolveCurrentUserId();
+        YearMonth startMonth = YearMonth.parse(startDate);
+        YearMonth endMonth = YearMonth.parse(endDate);
+
+        LocalDateTime startDateTime = startMonth.atDay(1).atStartOfDay();
+        LocalDateTime endDateTime = endMonth.atEndOfMonth().atTime(23, 59, 59);
+
+        List<EventProjection> content = eventRepository.findAllEventsByMonthRange(startDateTime, endDateTime, userId, groupId);
 
         return content.stream().map(
                 v -> EventMonthViewResponse.builder()
@@ -343,6 +355,25 @@ public class EventService implements IEventService {
                         .allDay(v.getAllDay())
                         .build()
         ).toList();
+    }
+
+    private Long resolveCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new APIException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
+        }
+
+        String username = authentication.getName();
+        if (username == null || username.isBlank() || "anonymousUser".equalsIgnoreCase(username)) {
+            throw new APIException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
+        }
+
+        Long userId = userRepository.findIdByUsername(username);
+        if (userId == null) {
+            throw new NotFoundException("User", "username", username);
+        }
+
+        return userId;
     }
 
     private String normalizeSortBy(String rawSortBy) {

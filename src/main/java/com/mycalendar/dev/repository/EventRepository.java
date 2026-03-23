@@ -158,20 +158,26 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             """, nativeQuery = true)
     long countAllEvents();
 
-    @Query(value = """
-            SELECT e.event_id,
-                   e.title,
-                   e.start_date,
-                   e.end_date,
-                   e.color,
-                   e.all_day
-            FROM events e
-            WHERE e.start_date >= to_date(:startMonth || '-01', 'YYYY-MM-DD')
-              AND e.start_date <= (to_date(:endMonth || '-01', 'YYYY-MM-DD') + INTERVAL '1 month' - INTERVAL '1 day')
-            ORDER BY e.event_id
-            """, nativeQuery = true)
-    List<EventProjection> findAllEventsByMonthRange(@Param("startMonth") String startMonth,
-                                                    @Param("endMonth") String endMonth);
+    @Query("""
+            SELECT e.eventId AS eventId,
+                   e.title AS title,
+                   e.startDate AS startDate,
+                   e.endDate AS endDate,
+                   e.color AS color,
+                   e.allDay AS allDay
+            FROM Event e
+            JOIN e.group g
+            JOIN g.userGroups ug
+            WHERE e.startDate >= :startDateTime
+              AND e.startDate <= :endDateTime
+              AND ug.user.userId = :userId
+              AND (:groupId IS NULL OR g.groupId = :groupId)
+            ORDER BY e.eventId
+            """)
+    List<EventProjection> findAllEventsByMonthRange(@Param("startDateTime") LocalDateTime startDateTime,
+                                                    @Param("endDateTime") LocalDateTime endDateTime,
+                                                    @Param("userId") Long userId,
+                                                    @Param("groupId") Long groupId);
 
     /**
      * Find events that are due for notification (optimized)
