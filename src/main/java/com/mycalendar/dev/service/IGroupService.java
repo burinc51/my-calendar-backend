@@ -10,7 +10,7 @@ import com.mycalendar.dev.payload.response.PaginationResponse;
 import java.util.List;
 
 public interface IGroupService {
-    void create(GroupRequest request);
+    GroupResponse create(GroupRequest request);
 
     GroupResponse update(GroupRequest request, Long id);
 

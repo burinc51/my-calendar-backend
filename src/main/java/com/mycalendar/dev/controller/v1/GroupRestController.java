@@ -7,6 +7,7 @@ import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IGroupService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,9 +25,9 @@ public class GroupRestController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<String> createGroup(@RequestBody GroupRequest request) {
-        groupService.create(request);
-        return ResponseEntity.ok("Group created successfully.");
+    public ResponseEntity<GroupResponse> createGroup(@RequestBody GroupRequest request) {
+        GroupResponse response = groupService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/update/{groupId}")

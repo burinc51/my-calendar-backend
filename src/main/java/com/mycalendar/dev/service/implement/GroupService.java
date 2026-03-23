@@ -46,7 +46,7 @@ public class GroupService implements IGroupService {
     }
 
     @Transactional
-    public void create(GroupRequest request) {
+    public GroupResponse create(GroupRequest request) {
         User creator = userRepository.findById(request.getCreatorUserId())
                 .orElseThrow(() -> new NotFoundException("User", "id", request.getCreatorUserId().toString()));
 
@@ -67,6 +67,7 @@ public class GroupService implements IGroupService {
         userGroup.setGroup(group);
         userGroup.setPermission(adminPermission);
         userGroupRepository.save(userGroup);
+        group.getUserGroups().add(userGroup);
 
         // Record activity: group created
         activityLogService.record(
@@ -77,6 +78,8 @@ public class GroupService implements IGroupService {
                 null, null,
                 false
         );
+
+        return GroupMapper.mapToDto(group);
     }
 
     @Override
