@@ -3,8 +3,8 @@ package com.mycalendar.dev.service;
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
-import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
+import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 
 import java.util.List;
@@ -22,7 +22,7 @@ public interface IGroupService {
 
     List<GroupResponse> getGroupsByUserId(Long userId);
 
-    List<GroupMemberResponse> getUsersByGroupId(Long groupId);
+    List<GroupUserResponse> getUsersByGroupId(Long groupId);
 
     void removeMember(Long groupId, Long userId);
 

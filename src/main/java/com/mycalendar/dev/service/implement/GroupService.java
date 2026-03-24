@@ -10,8 +10,8 @@ import com.mycalendar.dev.mapper.GroupMapper;
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
-import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
+import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.projection.GroupProjection;
 import com.mycalendar.dev.repository.GroupRepository;
@@ -165,17 +165,17 @@ public class GroupService implements IGroupService {
 
     @Override
     @Transactional
-    public List<GroupMemberResponse> getUsersByGroupId(Long groupId) {
+    public List<GroupUserResponse> getUsersByGroupId(Long groupId) {
         if (!groupRepository.existsById(groupId)) {
             throw new NotFoundException("Group", "id", groupId.toString());
         }
 
         return userGroupRepository.findMembersByGroupId(groupId).stream()
-                .map(v -> GroupMemberResponse.builder()
+                .map(v -> GroupUserResponse.builder()
                         .userId(v.getUserId())
-                        .initialText(getInitialText(v.getName()))
-                        .avatarColor(getAvatarColor(v.getUserId()))
-                        .picture_url(v.getPictureUrl())
+                        .username(v.getUsername())
+                        .name(v.getName())
+                        .imageUrl(v.getPictureUrl())
                         .build())
                 .toList();
     }

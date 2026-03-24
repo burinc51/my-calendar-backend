@@ -3,7 +3,7 @@ package com.mycalendar.dev.controller.v1;
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
-import com.mycalendar.dev.payload.response.GroupMemberResponse;
+import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IGroupService;
@@ -58,7 +58,7 @@ public class GroupRestController {
     }
 
     @GetMapping("/{groupId}/users")
-    public ResponseEntity<List<GroupMemberResponse>> getUsersByGroupId(@PathVariable Long groupId) {
+    public ResponseEntity<List<GroupUserResponse>> getUsersByGroupId(@PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.getUsersByGroupId(groupId));
     }
 
