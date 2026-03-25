@@ -12,6 +12,7 @@ import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventMonthViewResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
+import com.mycalendar.dev.payload.response.event.EventUserSummaryResponse;
 import com.mycalendar.dev.projection.EventProjection;
 import com.mycalendar.dev.repository.CustomEventRepository;
 import com.mycalendar.dev.repository.EventRepository;
@@ -34,9 +35,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -345,16 +350,43 @@ public class EventService implements IEventService {
 
         List<EventProjection> content = eventRepository.findAllEventsByMonthRange(startDateTime, endDateTime, userId, groupId);
 
-        return content.stream().map(
-                v -> EventMonthViewResponse.builder()
-                        .eventId(v.getEventId())
-                        .title(v.getTitle())
-                        .startDate(v.getStartDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")))
-                        .endDate(v.getEndDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")))
-                        .color(v.getColor())
-                        .allDay(v.getAllDay())
-                        .build()
-        ).toList();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        Map<Long, EventMonthViewResponse.EventMonthViewResponseBuilder> eventMap = new LinkedHashMap<>();
+        Map<Long, List<EventUserSummaryResponse>> assigneeMap = new LinkedHashMap<>();
+
+        for (EventProjection row : content) {
+            EventMonthViewResponse.EventMonthViewResponseBuilder eventBuilder = eventMap.computeIfAbsent(
+                    row.getEventId(),
+                    ignored -> EventMonthViewResponse.builder()
+                            .eventId(row.getEventId())
+                            .title(row.getTitle())
+                            .startDate(Optional.ofNullable(row.getStartDate()).map(d -> d.format(formatter)).orElse(null))
+                            .endDate(Optional.ofNullable(row.getEndDate()).map(d -> d.format(formatter)).orElse(null))
+                            .color(row.getColor())
+                            .allDay(row.getAllDay())
+                            .priority(row.getPriority())
+                            .createdBy(EventUserSummaryResponse.builder()
+                                    .userId(row.getCreatedByUserId())
+                                    .username(row.getCreatedByUsername())
+                                    .name(row.getCreatedByName())
+                                    .imageUrl(row.getCreatedByImageUrl())
+                                    .build())
+            );
+
+            List<EventUserSummaryResponse> assignees = assigneeMap.computeIfAbsent(row.getEventId(), ignored -> new ArrayList<>());
+            if (row.getUserId() != null && assignees.stream().noneMatch(v -> v.userId().equals(row.getUserId()))) {
+                assignees.add(EventUserSummaryResponse.builder()
+                        .userId(row.getUserId())
+                        .username(row.getUsername())
+                        .name(row.getName())
+                        .imageUrl(row.getUserImageUrl())
+                        .build());
+            }
+
+            eventBuilder.assignees(assignees);
+        }
+
+        return eventMap.values().stream().map(EventMonthViewResponse.EventMonthViewResponseBuilder::build).toList();
     }
 
     private Long resolveCurrentUserId() {

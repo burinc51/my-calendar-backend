@@ -2,6 +2,8 @@ package com.mycalendar.dev.payload.response.event;
 
 import lombok.Builder;
 
+import java.util.List;
+
 @Builder
 public record EventMonthViewResponse(
         Long eventId,
@@ -9,6 +11,9 @@ public record EventMonthViewResponse(
         String startDate,
         String endDate,
         String color,
-        Boolean allDay
+        Boolean allDay,
+        String priority,
+        List<EventUserSummaryResponse> assignees,
+        EventUserSummaryResponse createdBy
 ) {
 }

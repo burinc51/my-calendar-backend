@@ -164,10 +164,21 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                    e.startDate AS startDate,
                    e.endDate AS endDate,
                    e.color AS color,
-                   e.allDay AS allDay
+                   e.allDay AS allDay,
+                   e.priority AS priority,
+                   assignee.userId AS userId,
+                   assignee.username AS username,
+                   assignee.name AS name,
+                   assignee.pictureUrl AS userImageUrl,
+                   creator.userId AS createdByUserId,
+                   creator.username AS createdByUsername,
+                   creator.name AS createdByName,
+                   creator.pictureUrl AS createdByImageUrl
             FROM Event e
             JOIN e.group g
             JOIN g.userGroups ug
+            LEFT JOIN e.users assignee
+            LEFT JOIN User creator ON creator.userId = e.createById
             WHERE e.startDate >= :startDateTime
               AND e.startDate <= :endDateTime
               AND ug.user.userId = :userId
