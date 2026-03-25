@@ -267,7 +267,9 @@ public class EventService implements IEventService {
 
     @Override
     @Transactional
-    public void deleteEvent(Long eventId, Long userId) {
+    public void deleteEvent(Long eventId) {
+        Long userId = resolveCurrentUserId();
+
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event", "id", eventId.toString()));
 

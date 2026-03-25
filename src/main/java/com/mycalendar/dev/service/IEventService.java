@@ -22,7 +22,7 @@ public interface IEventService {
 
     EventResponse removeAssignees(Long eventId, List<Long> userIds);
 
-    void deleteEvent(Long eventId, Long userId);
+    void deleteEvent(Long eventId);
 
     PaginationResponse<EventResponse> getAllEventByGroup(Long groupId, PaginationRequest request);
 

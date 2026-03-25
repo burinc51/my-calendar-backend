@@ -94,8 +94,8 @@ public class EventRestController {
     }
 
     @DeleteMapping("/{eventId}")
-    public void deleteEvent(@PathVariable Long eventId, @RequestParam Long requestUserId) {
-        eventService.deleteEvent(eventId, requestUserId);
+    public void deleteEvent(@PathVariable Long eventId) {
+        eventService.deleteEvent(eventId);
     }
 
     @PostMapping("/all/{groupId}")
