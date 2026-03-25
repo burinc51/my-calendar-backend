@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +43,7 @@ public class ActivityLogService implements IActivityLogService {
      * no one else needs to be notified about the event creation.
      */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(Long groupId, Long actorId,
                        String actionType,
                        Long eventId, String eventTitle,
@@ -101,7 +102,7 @@ public class ActivityLogService implements IActivityLogService {
                                                String targetUserName) {
         try {
             // Get all members of the group except the actor
-            List<Long> memberIds = userGroupRepository.findUserIdsByGroupId(groupId)
+            List<Long> memberIds = userGroupRepository.findUserIdsByGroupId(groupId) 
                     .stream()
                     .filter(id -> !id.equals(actorId))
                     .toList();

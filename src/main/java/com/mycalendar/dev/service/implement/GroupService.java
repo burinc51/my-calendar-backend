@@ -21,8 +21,12 @@ import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IActivityLogService;
 import com.mycalendar.dev.service.IGroupService;
 import jakarta.transaction.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import com.mycalendar.dev.exception.APIException;
 
 import java.util.List;
 
@@ -47,8 +51,9 @@ public class GroupService implements IGroupService {
 
     @Transactional
     public GroupResponse create(GroupRequest request) {
-        User creator = userRepository.findById(request.getCreatorUserId())
-                .orElseThrow(() -> new NotFoundException("User", "id", request.getCreatorUserId().toString()));
+        Long creatorUserId = resolveCurrentUserId();
+        User creator = userRepository.findById(creatorUserId)
+                .orElseThrow(() -> new NotFoundException("User", "id", creatorUserId.toString()));
 
         Group group = new Group();
         group.setGroupName(request.getGroupName());
@@ -67,19 +72,38 @@ public class GroupService implements IGroupService {
         userGroup.setGroup(group);
         userGroup.setPermission(adminPermission);
         userGroupRepository.save(userGroup);
-        group.getUserGroups().add(userGroup);
 
         // Record activity: group created
+        groupRepository.flush();
         activityLogService.record(
                 group.getGroupId(),
                 creator.getUserId(),
                 "GROUP_CREATED",
                 null, null,
                 null, null,
-                false
+                true  // Skip notification for group creation
         );
 
         return GroupMapper.mapToDto(group);
+    }
+
+    private Long resolveCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new APIException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
+        }
+
+        String username = authentication.getName();
+        if (username == null || username.isBlank() || "anonymousUser".equalsIgnoreCase(username)) {
+            throw new APIException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
+        }
+
+        Long userId = userRepository.findIdByUsername(username);
+        if (userId == null) {
+            throw new NotFoundException("User", "username", username);
+        }
+
+        return userId;
     }
 
     @Override
