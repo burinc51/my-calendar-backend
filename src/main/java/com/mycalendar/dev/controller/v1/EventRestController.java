@@ -5,6 +5,7 @@ import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventMonthViewResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
+import com.mycalendar.dev.payload.response.event.EventYearSummaryResponse;
 import com.mycalendar.dev.service.IEventService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -113,5 +114,11 @@ public class EventRestController {
                                                      @RequestParam String endDate,
                                                      @RequestParam(required = false) Long groupId) {
         return eventService.getAllEventsByMonthRange(startDate, endDate, groupId);
+    }
+
+    @GetMapping("/year-summary")
+    public EventYearSummaryResponse getYearSummary(@RequestParam Integer year,
+                                                   @RequestParam(required = false) Long groupId) {
+        return eventService.getYearSummary(year, groupId);
     }
 }

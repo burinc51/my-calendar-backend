@@ -5,6 +5,7 @@ import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventMonthViewResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
+import com.mycalendar.dev.payload.response.event.EventYearSummaryResponse;
 import io.micrometer.common.lang.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,4 +30,6 @@ public interface IEventService {
     PaginationResponse<EventResponse> getAllEvent(PaginationRequest request);
 
     List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate, Long groupId);
+
+    EventYearSummaryResponse getYearSummary(Integer year, Long groupId);
 }

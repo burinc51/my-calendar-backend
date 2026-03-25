@@ -159,6 +159,22 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     long countAllEvents();
 
     @Query("""
+            SELECT EXTRACT(MONTH FROM e.startDate) AS month,
+                   EXTRACT(DAY FROM e.startDate) AS day
+            FROM Event e
+            JOIN e.group g
+            JOIN g.userGroups ug
+            WHERE EXTRACT(YEAR FROM e.startDate) = :year
+              AND ug.user.userId = :userId
+              AND (:groupId IS NULL OR g.groupId = :groupId)
+            GROUP BY EXTRACT(MONTH FROM e.startDate), EXTRACT(DAY FROM e.startDate)
+            ORDER BY EXTRACT(MONTH FROM e.startDate), EXTRACT(DAY FROM e.startDate)
+            """)
+    List<Object[]> findEventDaysByYear(@Param("year") Integer year,
+                                        @Param("userId") Long userId,
+                                        @Param("groupId") Long groupId);
+
+    @Query("""
             SELECT e.eventId AS eventId,
                    e.title AS title,
                    e.startDate AS startDate,

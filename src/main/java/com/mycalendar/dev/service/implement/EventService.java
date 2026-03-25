@@ -12,6 +12,7 @@ import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.event.EventMonthViewResponse;
 import com.mycalendar.dev.payload.response.event.EventResponse;
+import com.mycalendar.dev.payload.response.event.EventYearSummaryResponse;
 import com.mycalendar.dev.payload.response.event.EventUserSummaryResponse;
 import com.mycalendar.dev.projection.EventProjection;
 import com.mycalendar.dev.repository.CustomEventRepository;
@@ -37,6 +38,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.TreeMap;
 import java.util.Locale;
 import java.util.HashSet;
 import java.util.List;
@@ -430,5 +432,26 @@ public class EventService implements IEventService {
         }
 
         return rawSortOrder.trim().equalsIgnoreCase("ASC") ? "ASC" : "DESC";
+    }
+
+    @Override
+    public EventYearSummaryResponse getYearSummary(Integer year, Long groupId) {
+        Long userId = resolveCurrentUserId();
+
+        List<Object[]> results = eventRepository.findEventDaysByYear(year, userId, groupId);
+
+        Map<Integer, List<Integer>> monthMap = new TreeMap<>();
+
+        for (Object[] row : results) {
+            Integer month = ((Number) row[0]).intValue();
+            Integer day = ((Number) row[1]).intValue();
+
+            monthMap.computeIfAbsent(month, k -> new ArrayList<>()).add(day);
+        }
+
+        return EventYearSummaryResponse.builder()
+                .year(year)
+                .months(monthMap)
+                .build();
     }
 }
