@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface GroupRepository extends JpaRepository<Group, Long> {
@@ -27,7 +28,8 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
                 m.username              AS username,
                 m.name                  AS name,
                 p.permissionName        AS permissionName,
-                m.pictureUrl            AS pictureUrl
+                m.pictureUrl            AS pictureUrl,
+                g.inviteCode            AS inviteCode
             FROM UserGroup ug
                 JOIN ug.group g
                 JOIN g.userGroups ugm
@@ -37,4 +39,6 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
             ORDER BY g.groupId, m.userId
             """)
     List<GroupProjection> findAllGroupsByUserId(@Param("userId") Long userId);
+
+    Optional<Group> findByInviteCode(String inviteCode);
 }

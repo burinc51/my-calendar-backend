@@ -47,6 +47,7 @@ public class GroupMapper {
                 .icon(group.getIcon())
                 .color(group.getColor())
                 .bg(group.getBg())
+                .inviteCode(group.getInviteCode())
                 .members(group.getUserGroups().stream().map(
                         v -> GroupUserResponse.builder()
                                 .userId(v.getUser().getUserId())
@@ -72,6 +73,7 @@ public class GroupMapper {
                             .icon(row.getIcon())
                             .color(row.getColor())
                             .bg(row.getBg())
+                            .inviteCode(row.getInviteCode())
                             .members(new ArrayList<>())
                             .build()
             );

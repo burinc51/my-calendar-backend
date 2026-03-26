@@ -27,4 +27,6 @@ public interface IGroupService {
     void removeMember(Long groupId, Long userId);
 
     void deleteGroup(Long id, Long requestUserId);
+
+    GroupResponse joinByCode(String inviteCode);
 }

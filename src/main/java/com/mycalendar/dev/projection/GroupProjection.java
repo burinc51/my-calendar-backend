@@ -22,4 +22,6 @@ public interface GroupProjection {
     String getPermissionName();
 
     String getPictureUrl();
+
+    String getInviteCode();
 }

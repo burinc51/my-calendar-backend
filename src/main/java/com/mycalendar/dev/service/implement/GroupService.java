@@ -29,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import com.mycalendar.dev.exception.APIException;
 
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class GroupService implements IGroupService {
@@ -61,6 +62,7 @@ public class GroupService implements IGroupService {
         group.setIcon(request.getIcon());
         group.setColor(request.getColor());
         group.setBg(request.getBg());
+        group.setInviteCode(generateUniqueInviteCode());
 
         groupRepository.save(group);
 
@@ -270,6 +272,55 @@ public class GroupService implements IGroupService {
         );
 
         groupRepository.delete(group);
+    }
+    @Transactional
+    @Override
+    public GroupResponse joinByCode(String inviteCode) {
+        Long userId = resolveCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User", "id", userId.toString()));
+
+        Group group = groupRepository.findByInviteCode(inviteCode)
+                .orElseThrow(() -> new NotFoundException("Group", "inviteCode", inviteCode));
+
+        boolean alreadyMember = userGroupRepository.existsByUserUserIdAndGroupGroupId(userId, group.getGroupId());
+        if (alreadyMember) {
+            throw new APIException(HttpStatus.CONFLICT, "You are already a member of this group");
+        }
+
+        Permission memberPermission = permissionRepository.findByPermissionName("MEMBER")
+                .orElseThrow(() -> new NotFoundException("Permission", "name", "MEMBER"));
+
+        UserGroup userGroup = new UserGroup();
+        userGroup.setUser(user);
+        userGroup.setGroup(group);
+        userGroup.setPermission(memberPermission);
+        userGroupRepository.save(userGroup);
+
+        activityLogService.record(
+                group.getGroupId(),
+                userId,
+                "MEMBER_ADDED",
+                null, null,
+                user.getUserId(), user.getName(),
+                false
+        );
+
+        return GroupMapper.mapToDto(group);
+    }
+
+    private String generateUniqueInviteCode() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        String code;
+        do {
+            StringBuilder sb = new StringBuilder(6);
+            for (int i = 0; i < 6; i++) {
+                sb.append(chars.charAt(random.nextInt(chars.length())));
+            }
+            code = sb.toString();
+        } while (groupRepository.findByInviteCode(code).isPresent());
+        return code;
     }
 
 }
