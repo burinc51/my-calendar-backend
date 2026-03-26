@@ -7,6 +7,6 @@ public record GroupMemberResponse(
         Long userId,
         String initialText,
         String avatarColor,
-        String picture_url
+        String pictureUrl
 ) {
 }

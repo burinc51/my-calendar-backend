@@ -51,7 +51,7 @@ public class GroupMapper {
                                 .userId(v.getUser().getUserId())
                                 .initialText(getInitialText(v.getUser().getName()))
                                 .avatarColor(getAvatarColor(v.getUser().getUserId()))
-                                .picture_url(v.getUser().getPictureUrl())
+                                .pictureUrl(v.getUser().getPictureUrl())
                                 .build()
                 ).toList())
                 .build();
@@ -81,7 +81,7 @@ public class GroupMapper {
                             .userId(row.getUserId())
                             .initialText(getInitialText(row.getName()))
                             .avatarColor(getAvatarColor(row.getUserId()))
-                            .picture_url(row.getPictureUrl())
+                            .pictureUrl(row.getPictureUrl())
                             .build()
             );
         }

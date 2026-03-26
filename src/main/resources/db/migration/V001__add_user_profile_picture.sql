@@ -1,5 +1,5 @@
 -- Profile picture ownership migration
--- 1) users becomes the profile source (picture_url + picture_source)
+-- 1) users becomes the profile source (pictureUrl + picture_source)
 -- 2) backfill first picture from the latest Google social record
 -- 3) remove deprecated profile fields from user_social_provider
 
