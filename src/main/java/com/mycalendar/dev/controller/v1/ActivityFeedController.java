@@ -47,7 +47,7 @@ public class ActivityFeedController {
      *
      * Returns the personal activity feed for a user
      * (covers all groups the user belongs to), newest first.
-     * Shows actions of EVERYONE in those groups.
+     * Shows actions of OTHER users in those groups.
      *
      * @param userId  The user ID
      * @param page    Page number (1-based, default 1)
@@ -56,7 +56,7 @@ public class ActivityFeedController {
     @GetMapping("/user/{userId}")
     @Operation(
             summary = "Get personal activity feed",
-            description = "Returns activity logs across all groups the user belongs to (everyone's actions), newest first."
+            description = "Returns activity logs across all groups the user belongs to (other users' actions only), newest first."
     )
     public ResponseEntity<PaginationResponse<ActivityFeedResponse>> getUserFeed(
             @PathVariable Long userId,

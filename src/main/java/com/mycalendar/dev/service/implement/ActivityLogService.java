@@ -6,6 +6,7 @@ import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.payload.response.ActivityFeedResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.repository.ActivityLogRepository;
+import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.PushTokenRepository;
 import com.mycalendar.dev.repository.UserGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
@@ -31,6 +32,7 @@ public class ActivityLogService implements IActivityLogService {
 
     private final ActivityLogRepository activityLogRepository;
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
     private final UserGroupRepository userGroupRepository;
     private final PushTokenRepository pushTokenRepository;
     private final ExpoPushService expoPushService;
@@ -82,7 +84,7 @@ public class ActivityLogService implements IActivityLogService {
 
         // Send push notification to all group members (except the actor)
         sendActivityPushNotification(groupId, actorId, actorName,
-                actionType, eventTitle, targetUserName);
+                actionType, eventTitle, targetUserId, targetUserName);
     }
 
     /**
@@ -99,12 +101,16 @@ public class ActivityLogService implements IActivityLogService {
      */
     private void sendActivityPushNotification(Long groupId, Long actorId, String actorName,
                                                String actionType, String eventTitle,
-                                               String targetUserName) {
+                                               Long targetUserId, String targetUserName) {
         try {
             // Get all members of the group except the actor
             List<Long> memberIds = userGroupRepository.findUserIdsByGroupId(groupId) 
                     .stream()
                     .filter(id -> !id.equals(actorId))
+                    // For MEMBER_ADDED, never notify the newly added member about their own join.
+                    .filter(id -> !("MEMBER_ADDED".equals(actionType)
+                            && targetUserId != null
+                            && id.equals(targetUserId)))
                     .toList();
 
             if (memberIds.isEmpty()) {
@@ -121,7 +127,10 @@ public class ActivityLogService implements IActivityLogService {
 
             // Build notification title and body from actionType
             String title = buildNotificationTitle(actionType);
-            String body  = buildNotificationBody(actorName, actionType, eventTitle, targetUserName);
+            String groupName = groupRepository.findById(groupId)
+                    .map(com.mycalendar.dev.entity.Group::getGroupName)
+                    .orElse("");
+            String body  = buildNotificationBody(actorName, actionType, eventTitle, targetUserName, groupName);
 
             // Extra data sent alongside the notification (for deep-linking in the app)
             Map<String, Object> data = new HashMap<>();
@@ -164,12 +173,13 @@ public class ActivityLogService implements IActivityLogService {
      * Returns a human-readable notification body.
      */
     private String buildNotificationBody(String actorName, String actionType,
-                                          String eventTitle, String targetUserName) {
+                                          String eventTitle, String targetUserName,
+                                          String groupName) {
         return switch (actionType) {
             case "EVENT_CREATED"  -> actorName + " สร้างกิจกรรม \"" + eventTitle + "\"";
             case "EVENT_UPDATED"  -> actorName + " แก้ไขกิจกรรม \"" + eventTitle + "\"";
             case "EVENT_DELETED"  -> actorName + " ลบกิจกรรม \"" + eventTitle + "\"";
-            case "MEMBER_ADDED"   -> actorName + " เพิ่มสมาชิก " + targetUserName + " เข้ากลุ่ม";
+            case "MEMBER_ADDED"   -> targetUserName + " ใหม่ เข้ากลุ่ม " + groupName;
             case "MEMBER_REMOVED" -> actorName + " ลบสมาชิก " + targetUserName + " ออกจากกลุ่ม";
             case "GROUP_CREATED"  -> actorName + " สร้างกลุ่มใหม่";
             case "GROUP_UPDATED"  -> actorName + " แก้ไขข้อมูลกลุ่ม";

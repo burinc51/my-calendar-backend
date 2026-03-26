@@ -24,6 +24,8 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
             WHERE a.groupId IN (
                 SELECT ug.group.groupId FROM UserGroup ug WHERE ug.user.userId = :userId
             )
+            AND a.actorId <> :userId
+            AND NOT (a.actionType = 'MEMBER_ADDED' AND a.targetUserId = :userId)
             ORDER BY a.createdAt DESC
             """)
     Page<ActivityLog> findFeedByUserId(@Param("userId") Long userId, Pageable pageable);

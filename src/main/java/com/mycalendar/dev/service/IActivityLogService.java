@@ -32,7 +32,7 @@ public interface IActivityLogService {
 
     /**
      * Get a paginated personal activity feed for a user
-     * (all groups the user belongs to — sees everyone's actions in those groups).
+     * (all groups the user belongs to — sees other users' actions in those groups).
      */
     PaginationResponse<ActivityFeedResponse> getUserFeed(Long userId, int page, int size);
 
