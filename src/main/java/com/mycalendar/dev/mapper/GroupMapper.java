@@ -3,6 +3,7 @@ package com.mycalendar.dev.mapper;
 import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.payload.response.GroupMemberResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
+import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.projection.GroupProjection;
 
 import java.util.ArrayList;
@@ -47,11 +48,11 @@ public class GroupMapper {
                 .color(group.getColor())
                 .bg(group.getBg())
                 .members(group.getUserGroups().stream().map(
-                        v -> GroupMemberResponse.builder()
+                        v -> GroupUserResponse.builder()
                                 .userId(v.getUser().getUserId())
-                                .initialText(getInitialText(v.getUser().getName()))
-                                .avatarColor(getAvatarColor(v.getUser().getUserId()))
-                                .pictureUrl(v.getUser().getPictureUrl())
+                                .username(v.getUser().getUsername())
+                                .name(v.getUser().getName())
+                                .imageUrl(v.getUser().getPictureUrl())
                                 .build()
                 ).toList())
                 .build();
@@ -77,11 +78,11 @@ public class GroupMapper {
 
             // Add member to group
             response.members().add(
-                    GroupMemberResponse.builder()
+                    GroupUserResponse.builder()
                             .userId(row.getUserId())
-                            .initialText(getInitialText(row.getName()))
-                            .avatarColor(getAvatarColor(row.getUserId()))
-                            .pictureUrl(row.getPictureUrl())
+                            .username(row.getUsername())
+                            .name(row.getName())
+                            .imageUrl(row.getPictureUrl())
                             .build()
             );
         }

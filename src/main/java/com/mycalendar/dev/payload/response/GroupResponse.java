@@ -11,6 +11,6 @@ public record GroupResponse(
         String icon,
         String color,
         String bg,
-        List<GroupMemberResponse> members
+        List<GroupUserResponse> members
 ) {
 }
