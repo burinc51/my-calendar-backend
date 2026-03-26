@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import static com.mycalendar.dev.constant.PageConstant.*;
 
@@ -42,10 +44,18 @@ public class UserRestController {
         return ResponseEntity.ok("Role removed successfully.");
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> update(@Valid @RequestBody UserUpdateRequest userUpdateRequest, @PathVariable Long id) {
-        userService.update(userUpdateRequest, id);
-        return ResponseEntity.ok("User updated successfully.");
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<UserResponse> update(@Valid @RequestPart("body") UserUpdateRequest userUpdateRequest,
+                                         @RequestPart(value = "file", required = false) MultipartFile file,
+                                         @PathVariable Long id) {
+        UserResponse userResponse = userService.update(userUpdateRequest, file, id);
+        return ResponseEntity.ok(userResponse);
+    }
+
+    @PutMapping(value = "/{id}", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<UserResponse> updateJson(@Valid @RequestBody UserUpdateRequest userUpdateRequest, @PathVariable Long id) {
+        UserResponse userResponse = userService.update(userUpdateRequest, null, id);
+        return ResponseEntity.ok(userResponse);
     }
 
     @DeleteMapping("/{id}")
