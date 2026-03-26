@@ -73,6 +73,7 @@ public class UserService implements IUserService {
                 .orElseThrow(() -> new NotFoundException("User", "id", id.toString()));
 
         user.setName(userUpdateRequest.getName());
+        user.setPictureUrl(userUpdateRequest.getPictureUrl());
 
         userRepository.save(user);
     }

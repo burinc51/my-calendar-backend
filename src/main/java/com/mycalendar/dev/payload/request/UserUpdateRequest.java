@@ -9,4 +9,6 @@ public class UserUpdateRequest {
     @NotEmpty(message = "Name should not be null.")
     @Pattern(regexp = "^[a-zA-Z\\s]*$", message = "Invalid name format, please use only letters and spaces.")
     private String name;
+
+    private String pictureUrl;
 }
