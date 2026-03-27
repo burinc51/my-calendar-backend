@@ -33,7 +33,7 @@ public class NoteRestController {
         this.noteService = noteService;
     }
 
-    @PostMapping
+    @PostMapping("/create")
     public NoteResponse create(@Valid @RequestBody NoteUpsertRequest request) {
         return noteService.create(request);
     }
