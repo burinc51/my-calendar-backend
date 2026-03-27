@@ -28,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import com.mycalendar.dev.exception.APIException;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 @Service
@@ -110,8 +112,12 @@ public class GroupService implements IGroupService {
 
     @Override
     public GroupResponse update(GroupRequest request, Long id) {
+        Long actorUserId = resolveCurrentUserId();
+
         Group group = groupRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Group", "groupId", id.toString()));
+
+        String actionDetail = buildGroupUpdateDetail(group, request);
 
         group.setGroupName(request.getGroupName());
         group.setDescription(request.getDescription());
@@ -120,6 +126,16 @@ public class GroupService implements IGroupService {
         group.setBg(request.getBg());
 
         groupRepository.save(group);
+
+        activityLogService.record(
+                group.getGroupId(),
+                actorUserId,
+                "GROUP_UPDATED",
+                null, null,
+                null, null,
+                actionDetail,
+                false
+        );
 
         return GroupMapper.mapToDto(group);
     }
@@ -324,6 +340,30 @@ public class GroupService implements IGroupService {
             code = sb.toString();
         } while (groupRepository.findByInviteCode(code).isPresent());
         return code;
+    }
+
+    private String buildGroupUpdateDetail(Group currentGroup, GroupRequest request) {
+        List<String> changes = new ArrayList<>();
+        appendChange(changes, "groupName", currentGroup.getGroupName(), request.getGroupName());
+        appendChange(changes, "description", currentGroup.getDescription(), request.getDescription());
+        appendChange(changes, "icon", currentGroup.getIcon(), request.getIcon());
+        appendChange(changes, "color", currentGroup.getColor(), request.getColor());
+        appendChange(changes, "bg", currentGroup.getBg(), request.getBg());
+
+        if (changes.isEmpty()) {
+            return "No field changes";
+        }
+        return String.join("; ", changes);
+    }
+
+    private void appendChange(List<String> changes, String field, Object oldValue, Object newValue) {
+        if (!Objects.equals(oldValue, newValue)) {
+            changes.add(field + ": " + safeText(oldValue) + " -> " + safeText(newValue));
+        }
+    }
+
+    private String safeText(Object value) {
+        return value == null ? "null" : value.toString();
     }
 
 }

@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Objects;
 
 @Service
 public class EventService implements IEventService {
@@ -122,6 +123,7 @@ public class EventService implements IEventService {
         // ✅ 6) CREATE or UPDATE
         Event event;
         boolean isCreating = (request.getEventId() == null);
+        String actionDetail = null;
         if (!isCreating) {
             // --- UPDATE ---
             event = eventRepository.findById(request.getEventId())
@@ -131,6 +133,8 @@ public class EventService implements IEventService {
             if (!event.getGroup().getGroupId().equals(request.getGroupId())) {
                 throw new IllegalArgumentException("Cannot move event to another group");
             }
+
+            actionDetail = buildEventUpdateDetail(event, request);
 
         } else {
             // --- CREATE ---
@@ -209,6 +213,7 @@ public class EventService implements IEventService {
                 actionType,
                 saved.getEventId(), saved.getTitle(),
                 null, null,
+                actionDetail,
                 onlyCreator   // skipActivityPush
         );
 
@@ -453,5 +458,34 @@ public class EventService implements IEventService {
                 .year(year)
                 .months(monthMap)
                 .build();
+    }
+
+    private String buildEventUpdateDetail(Event currentEvent, EventRequest request) {
+        List<String> changes = new ArrayList<>();
+
+        appendChange(changes, "title", currentEvent.getTitle(), request.getTitle());
+        appendChange(changes, "description", currentEvent.getDescription(), request.getDescription());
+        appendChange(changes, "startDate", currentEvent.getStartDate(), request.getStartDate());
+        appendChange(changes, "endDate", currentEvent.getEndDate(), request.getEndDate());
+        appendChange(changes, "location", currentEvent.getLocation(), request.getLocation());
+        appendChange(changes, "color", currentEvent.getColor(), request.getColor());
+        appendChange(changes, "category", currentEvent.getCategory(), request.getCategory());
+        appendChange(changes, "priority", currentEvent.getPriority(), request.getPriority());
+        appendChange(changes, "allDay", currentEvent.getAllDay(), request.getAllDay());
+
+        if (changes.isEmpty()) {
+            return "No field changes";
+        }
+        return String.join("; ", changes);
+    }
+
+    private void appendChange(List<String> changes, String field, Object oldValue, Object newValue) {
+        if (!Objects.equals(oldValue, newValue)) {
+            changes.add(field + ": " + safeText(oldValue) + " -> " + safeText(newValue));
+        }
+    }
+
+    private String safeText(Object value) {
+        return value == null ? "null" : value.toString();
     }
 }

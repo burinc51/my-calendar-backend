@@ -26,6 +26,16 @@ public interface IActivityLogService {
                 boolean skipActivityPush);
 
     /**
+     * Same as record(...), with optional actionDetail to describe what changed.
+     */
+    void record(Long groupId, Long actorId,
+                String actionType,
+                Long eventId, String eventTitle,
+                Long targetUserId, String targetUserName,
+                String actionDetail,
+                boolean skipActivityPush);
+
+    /**
      * Get a paginated activity feed for a specific group.
      */
     PaginationResponse<ActivityFeedResponse> getGroupFeed(Long groupId, int page, int size);
@@ -42,4 +52,3 @@ public interface IActivityLogService {
      */
     PaginationResponse<ActivityFeedResponse> getUserActions(Long userId, int page, int size);
 }
-

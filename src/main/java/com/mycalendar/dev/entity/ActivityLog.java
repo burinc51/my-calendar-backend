@@ -85,6 +85,12 @@ public class ActivityLog {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * Optional details about the action, for example, what exactly was updated in an event.
+     */
+    @Column(name = "action_detail", length = 1000)
+    private String actionDetail;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -116,4 +122,3 @@ public class ActivityLog {
         this.targetUserName = targetUserName;
     }
 }
-

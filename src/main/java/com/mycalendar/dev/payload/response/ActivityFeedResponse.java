@@ -37,6 +37,9 @@ public record ActivityFeedResponse(
         Long targetUserId,
         String targetUserName,
 
+        /** Optional detail text describing what changed */
+        String actionDetail,
+
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime createdAt
 ) {}

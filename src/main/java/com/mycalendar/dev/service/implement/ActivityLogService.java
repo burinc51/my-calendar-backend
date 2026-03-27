@@ -46,11 +46,21 @@ public class ActivityLogService implements IActivityLogService {
      * no one else needs to be notified about the event creation.
      */
     @Override
+    public void record(Long groupId, Long actorId,
+                       String actionType,
+                       Long eventId, String eventTitle,
+                       Long targetUserId, String targetUserName,
+                       boolean skipActivityPush) {
+        record(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, null, skipActivityPush);
+    }
+
+    @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(Long groupId, Long actorId,
                        String actionType,
                        Long eventId, String eventTitle,
                        Long targetUserId, String targetUserName,
+                       String actionDetail,
                        boolean skipActivityPush) {
 
         // Resolve actor snapshot (name + avatar) so feed stays stable over time.
@@ -77,6 +87,7 @@ public class ActivityLogService implements IActivityLogService {
         activityLog.setEventTitle(eventTitle);
         activityLog.setTargetUserId(targetUserId);
         activityLog.setTargetUserName(targetUserName);
+        activityLog.setActionDetail(actionDetail);
         activityLogRepository.save(activityLog);
 
         // Skip push when creator is the only assignee (no one else to notify)
@@ -252,6 +263,7 @@ public class ActivityLogService implements IActivityLogService {
                 .eventTitle(a.getEventTitle())
                 .targetUserId(a.getTargetUserId())
                 .targetUserName(a.getTargetUserName())
+                .actionDetail(a.getActionDetail())
                 .createdAt(a.getCreatedAt())
                 .build();
     }
