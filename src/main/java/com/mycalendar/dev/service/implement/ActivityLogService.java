@@ -247,14 +247,14 @@ public class ActivityLogService implements IActivityLogService {
     private PaginationResponse<ActivityFeedResponse> toPageResponse(Page<ActivityLog> logPage, int page) {
         List<ActivityLog> logs = logPage.getContent();
 
-        Map<Long, String> groupNameById = groupRepository.findAllById(
+        Map<Long, Group> groupById = groupRepository.findAllById(
                         logs.stream()
                                 .map(ActivityLog::getGroupId)
                                 .filter(Objects::nonNull)
                                 .distinct()
                                 .toList())
                 .stream()
-                .collect(Collectors.toMap(Group::getGroupId, Group::getGroupName));
+                .collect(Collectors.toMap(Group::getGroupId, Function.identity()));
 
         Map<Long, Event> eventById = eventRepository.findAllById(
                         logs.stream()
@@ -266,7 +266,7 @@ public class ActivityLogService implements IActivityLogService {
                 .collect(Collectors.toMap(Event::getEventId, Function.identity()));
 
         List<ActivityFeedResponse> content = logs.stream()
-                .map(v -> toResponse(v, groupNameById, eventById))
+                .map(v -> toResponse(v, groupById, eventById))
                 .toList();
         return PaginationResponse.<ActivityFeedResponse>builder()
                 .content(content)
@@ -279,20 +279,23 @@ public class ActivityLogService implements IActivityLogService {
     }
 
     private ActivityFeedResponse toResponse(ActivityLog a,
-                                            Map<Long, String> groupNameById,
+                                            Map<Long, Group> groupById,
                                             Map<Long, Event> eventById) {
+        Group group = a.getGroupId() == null ? null : groupById.get(a.getGroupId());
         Event event = a.getEventId() == null ? null : eventById.get(a.getEventId());
 
         return ActivityFeedResponse.builder()
                 .id(a.getId())
                 .groupId(a.getGroupId())
-                .groupName(groupNameById.get(a.getGroupId()))
+                .groupName(group == null ? null : group.getGroupName())
+                .groupColor(group == null ? null : group.getColor())
                 .actorId(a.getActorId())
                 .actorName(a.getActorName())
                 .actorAvatar(a.getActorAvatar())
                 .actionType(a.getActionType())
                 .eventId(a.getEventId())
                 .eventTitle(a.getEventTitle())
+                .eventColor(event == null ? null : event.getColor())
                 .eventStartDate(event == null ? null : event.getStartDate())
                 .eventEndDate(event == null ? null : event.getEndDate())
                 .targetUserId(a.getTargetUserId())

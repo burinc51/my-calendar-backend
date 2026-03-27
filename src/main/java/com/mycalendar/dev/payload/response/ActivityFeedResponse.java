@@ -16,6 +16,7 @@ public record ActivityFeedResponse(
         /** Group the activity belongs to */
         Long groupId,
         String groupName,
+        String groupColor,
 
         /** User who performed the action */
         Long actorId,
@@ -33,6 +34,7 @@ public record ActivityFeedResponse(
         /** Populated when actionType is event-related */
         Long eventId,
         String eventTitle,
+        String eventColor,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime eventStartDate,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
