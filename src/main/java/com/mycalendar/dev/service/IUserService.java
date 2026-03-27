@@ -8,7 +8,7 @@ import com.mycalendar.dev.payload.response.UserResponse;
 public interface IUserService {
     void create(SignUpRequest signUpRequest);
 
-    void update(UserUpdateRequest userRequest, Long id);
+    com.mycalendar.dev.payload.response.UserResponse update(UserUpdateRequest userRequest, org.springframework.web.multipart.MultipartFile file, Long id);
 
     void delete(Long id);
 

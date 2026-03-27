@@ -20,6 +20,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import com.mycalendar.dev.enums.FileType;
+import com.mycalendar.dev.util.FileHandler;
 
 import java.util.HashSet;
 import java.util.List;
@@ -68,13 +71,23 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public void update(UserUpdateRequest userUpdateRequest, Long id) {
+    public UserResponse update(UserUpdateRequest userUpdateRequest, MultipartFile file, Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User", "id", id.toString()));
 
         user.setName(userUpdateRequest.getName());
 
-        userRepository.save(user);
+        if (file != null && !file.isEmpty()) {
+            String fileUpload = FileHandler.upload(file, FileType.IMAGES, user.getPictureUrl(), "/user");
+            if (fileUpload != null) {
+                user.setPictureUrl(fileUpload);
+            }
+        } else if (userUpdateRequest.getPictureUrl() != null) {
+            user.setPictureUrl(userUpdateRequest.getPictureUrl());
+        }
+
+        User saved = userRepository.save(user);
+        return EntityMapper.mapToEntity(saved, UserResponse.class);
     }
 
     @Override

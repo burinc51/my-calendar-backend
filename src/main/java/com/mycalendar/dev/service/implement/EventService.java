@@ -346,8 +346,8 @@ public class EventService implements IEventService {
     @Override
     public List<EventMonthViewResponse> getAllEventsByMonthRange(String startDate, String endDate, Long groupId) {
         Long userId = resolveCurrentUserId();
-        YearMonth startMonth = YearMonth.parse(startDate);
-        YearMonth endMonth = YearMonth.parse(endDate);
+        YearMonth startMonth = YearMonth.parse(startDate.substring(0, 7));
+        YearMonth endMonth = YearMonth.parse(endDate.substring(0, 7));
 
         LocalDateTime startDateTime = startMonth.atDay(1).atStartOfDay();
         LocalDateTime endDateTime = endMonth.atEndOfMonth().atTime(23, 59, 59);

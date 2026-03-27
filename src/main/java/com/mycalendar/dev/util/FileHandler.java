@@ -28,9 +28,9 @@ public class FileHandler {
                 String fileExtension = getFileExtension(Objects.requireNonNull(file.getOriginalFilename()));
 
                 String newFileName;
-                if (existingFileName != null) {
+                if (existingFileName != null && existingFileName.contains("/")) {
                     String[] parts = existingFileName.split("/");
-                    String baseName = parts.length > 2 ? getFileNameWithoutExtension(parts[2]) : getFileNameWithoutExtension(existingFileName);
+                    String baseName = getFileNameWithoutExtension(parts[parts.length - 1]);
                     newFileName = baseName + fileExtension;
                 } else {
                     newFileName = UUID.randomUUID() + fileExtension;
