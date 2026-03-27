@@ -1,5 +1,6 @@
 package com.mycalendar.dev.payload.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ public record ActivityFeedResponse(
         Long targetUserId,
         String targetUserName,
 
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime createdAt
 ) {}
 

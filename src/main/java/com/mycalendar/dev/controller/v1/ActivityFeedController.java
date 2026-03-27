@@ -3,6 +3,7 @@ package com.mycalendar.dev.controller.v1;
 import com.mycalendar.dev.payload.response.ActivityFeedResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IActivityLogService;
+import com.mycalendar.dev.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -43,26 +44,25 @@ public class ActivityFeedController {
     }
 
     /**
-     * GET /api/v1/activity/user/{userId}
+     * GET /api/v1/activity/user
      *
-     * Returns the personal activity feed for a user
+     * Returns the personal activity feed for the authenticated user
      * (covers all groups the user belongs to), newest first.
      * Shows actions of OTHER users in those groups.
      *
-     * @param userId  The user ID
      * @param page    Page number (1-based, default 1)
      * @param size    Page size (default 20)
      */
-    @GetMapping("/user/{userId}")
+    @GetMapping("/user")
     @Operation(
             summary = "Get personal activity feed",
-            description = "Returns activity logs across all groups the user belongs to (other users' actions only), newest first."
+            description = "Returns activity logs across all groups the authenticated user belongs to (other users' actions only), newest first."
     )
     public ResponseEntity<PaginationResponse<ActivityFeedResponse>> getUserFeed(
-            @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        Long userId = SecurityUtil.getCurrentUserId();
         PaginationResponse<ActivityFeedResponse> response =
                 activityLogService.getUserFeed(userId, page, size);
         return ResponseEntity.ok(response);

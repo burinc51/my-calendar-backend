@@ -225,17 +225,20 @@ public class GroupService implements IGroupService {
     }
 
     @Override
+    @Transactional
     public void removeMember(Long groupId, Long userId) {
+        Long currentUserId = resolveCurrentUserId();
+        
         UserGroup userGroup = userGroupRepository.findByUserUserIdAndGroupGroupId(userId, groupId)
                 .orElseThrow(() -> new NotFoundException("UserGroup", "user/group", userId + "/" + groupId));
 
         User removedUser = userGroup.getUser();
         userGroupRepository.delete(userGroup);
 
-        // Record activity: member removed
+        // Record activity: member removed (actor is the admin removing, target is the removed user)
         activityLogService.record(
                 groupId,
-                userId,
+                currentUserId,
                 "MEMBER_REMOVED",
                 null, null,
                 removedUser.getUserId(), removedUser.getName(),

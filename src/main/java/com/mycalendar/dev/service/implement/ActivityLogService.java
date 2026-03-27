@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,15 +53,17 @@ public class ActivityLogService implements IActivityLogService {
                        Long targetUserId, String targetUserName,
                        boolean skipActivityPush) {
 
-        // Resolve actor name (snapshot so it stays correct even if user renames later)
+        // Resolve actor snapshot (name + avatar) so feed stays stable over time.
         String actorName = "Unknown";
+        String actorAvatar = null;
         try {
             User actor = userRepository.findById(actorId).orElse(null);
             if (actor != null) {
                 actorName = actor.getName();
+                actorAvatar = actor.getPictureUrl();
             }
         } catch (Exception e) {
-            log.warn("Could not resolve actor name for userId={}", actorId);
+            log.warn("Could not resolve actor snapshot for userId={}", actorId);
         }
 
         // Save activity log (always recorded regardless of skipActivityPush)
@@ -68,7 +71,7 @@ public class ActivityLogService implements IActivityLogService {
         activityLog.setGroupId(groupId);
         activityLog.setActorId(actorId);
         activityLog.setActorName(actorName);
-        activityLog.setActorAvatar(null);
+        activityLog.setActorAvatar(actorAvatar);
         activityLog.setActionType(actionType);
         activityLog.setEventId(eventId);
         activityLog.setEventTitle(eventTitle);
@@ -103,18 +106,26 @@ public class ActivityLogService implements IActivityLogService {
                                                String actionType, String eventTitle,
                                                Long targetUserId, String targetUserName) {
         try {
-            // Get all members of the group except the actor
-            List<Long> memberIds = userGroupRepository.findUserIdsByGroupId(groupId) 
+            // Build recipient list from current members, excluding actor.
+            List<Long> memberIds = new ArrayList<>(userGroupRepository.findUserIdsByGroupId(groupId)
                     .stream()
                     .filter(id -> !id.equals(actorId))
                     // For MEMBER_ADDED, never notify the newly added member about their own join.
                     .filter(id -> !("MEMBER_ADDED".equals(actionType)
                             && targetUserId != null
                             && id.equals(targetUserId)))
-                    .toList();
+                    .toList());
+
+            // For MEMBER_REMOVED, include the removed user so they know why the group disappeared.
+            if ("MEMBER_REMOVED".equals(actionType)
+                    && targetUserId != null
+                    && !targetUserId.equals(actorId)
+                    && !memberIds.contains(targetUserId)) {
+                memberIds.add(targetUserId);
+            }
 
             if (memberIds.isEmpty()) {
-                log.debug("No other members in group {} to notify", groupId);
+                log.debug("No members to notify for group {} [{}]", groupId, actionType);
                 return;
             }
 
@@ -245,4 +256,3 @@ public class ActivityLogService implements IActivityLogService {
                 .build();
     }
 }
-
