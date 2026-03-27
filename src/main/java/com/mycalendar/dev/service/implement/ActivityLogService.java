@@ -1,11 +1,14 @@
 package com.mycalendar.dev.service.implement;
 
 import com.mycalendar.dev.entity.ActivityLog;
+import com.mycalendar.dev.entity.Event;
+import com.mycalendar.dev.entity.Group;
 import com.mycalendar.dev.entity.PushToken;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.payload.response.ActivityFeedResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.repository.ActivityLogRepository;
+import com.mycalendar.dev.repository.EventRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.PushTokenRepository;
 import com.mycalendar.dev.repository.UserGroupRepository;
@@ -25,6 +28,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +39,7 @@ public class ActivityLogService implements IActivityLogService {
 
     private final ActivityLogRepository activityLogRepository;
     private final UserRepository userRepository;
+    private final EventRepository eventRepository;
     private final GroupRepository groupRepository;
     private final UserGroupRepository userGroupRepository;
     private final PushTokenRepository pushTokenRepository;
@@ -238,8 +245,28 @@ public class ActivityLogService implements IActivityLogService {
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private PaginationResponse<ActivityFeedResponse> toPageResponse(Page<ActivityLog> logPage, int page) {
-        List<ActivityFeedResponse> content = logPage.getContent().stream()
-                .map(this::toResponse)
+        List<ActivityLog> logs = logPage.getContent();
+
+        Map<Long, String> groupNameById = groupRepository.findAllById(
+                        logs.stream()
+                                .map(ActivityLog::getGroupId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(Group::getGroupId, Group::getGroupName));
+
+        Map<Long, Event> eventById = eventRepository.findAllById(
+                        logs.stream()
+                                .map(ActivityLog::getEventId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(Event::getEventId, Function.identity()));
+
+        List<ActivityFeedResponse> content = logs.stream()
+                .map(v -> toResponse(v, groupNameById, eventById))
                 .toList();
         return PaginationResponse.<ActivityFeedResponse>builder()
                 .content(content)
@@ -251,16 +278,23 @@ public class ActivityLogService implements IActivityLogService {
                 .build();
     }
 
-    private ActivityFeedResponse toResponse(ActivityLog a) {
+    private ActivityFeedResponse toResponse(ActivityLog a,
+                                            Map<Long, String> groupNameById,
+                                            Map<Long, Event> eventById) {
+        Event event = a.getEventId() == null ? null : eventById.get(a.getEventId());
+
         return ActivityFeedResponse.builder()
                 .id(a.getId())
                 .groupId(a.getGroupId())
+                .groupName(groupNameById.get(a.getGroupId()))
                 .actorId(a.getActorId())
                 .actorName(a.getActorName())
                 .actorAvatar(a.getActorAvatar())
                 .actionType(a.getActionType())
                 .eventId(a.getEventId())
                 .eventTitle(a.getEventTitle())
+                .eventStartDate(event == null ? null : event.getStartDate())
+                .eventEndDate(event == null ? null : event.getEndDate())
                 .targetUserId(a.getTargetUserId())
                 .targetUserName(a.getTargetUserName())
                 .actionDetail(a.getActionDetail())
