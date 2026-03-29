@@ -58,13 +58,13 @@ public class NoteRestController {
         ));
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public NotePageResponse list(@RequestParam(defaultValue = "1") Integer pageNo,
-                                                              @RequestParam(defaultValue = "20") Integer pageSize,
-                                                              @RequestParam(required = false) String search,
-                                                              @RequestParam(defaultValue = "updatedAt") String sortBy,
-                                                              @RequestParam(defaultValue = "desc") String sortDirection,
-                                                              @RequestParam(required = false) Boolean isPinned) {
+                                 @RequestParam(defaultValue = "20") Integer pageSize,
+                                 @RequestParam(required = false) String search,
+                                 @RequestParam(defaultValue = "updatedAt") String sortBy,
+                                 @RequestParam(defaultValue = "desc") String sortDirection,
+                                 @RequestParam(required = false) Boolean isPinned) {
         return noteService.list(pageNo, pageSize, search, sortBy, sortDirection, isPinned);
     }
 

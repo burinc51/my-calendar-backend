@@ -106,6 +106,8 @@ public class NoteService implements INoteService {
                                  String sortBy,
                                  String sortDirection,
                                  Boolean isPinned) {
+        Long userId = resolveCurrentUserId();
+
         int normalizedPageNo = pageNo == null || pageNo < 1 ? 1 : pageNo;
         int normalizedPageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
 
@@ -113,7 +115,7 @@ public class NoteService implements INoteService {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
         Pageable pageable = PageRequest.of(normalizedPageNo - 1, normalizedPageSize, Sort.by(direction, normalizedSortBy));
-        Specification<Note> specification = buildSearchSpecification(search, isPinned);
+        Specification<Note> specification = buildSearchSpecification(userId, search, isPinned);
 
         Page<Note> page = noteRepository.findAll(specification, pageable);
 
@@ -234,9 +236,11 @@ public class NoteService implements INoteService {
         }
     }
 
-    private Specification<Note> buildSearchSpecification(String search, Boolean isPinned) {
+    private Specification<Note> buildSearchSpecification(Long userId, String search, Boolean isPinned) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(criteriaBuilder.equal(root.get("userId"), userId));
 
             if (isPinned != null) {
                 predicates.add(criteriaBuilder.equal(root.get("isPinned"), isPinned));
@@ -256,6 +260,14 @@ public class NoteService implements INoteService {
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private Long resolveCurrentUserId() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) {
+            throw new APIException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
+        }
+        return userId;
     }
 
     private String trimToNull(String value) {
