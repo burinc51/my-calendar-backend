@@ -102,6 +102,7 @@ public class GoogleAuthService implements IGoogleAuth {
                 .name(user.getName())
                 .email(user.getEmail())
                 .pictureUrl(user.getPictureUrl())
+                .isAdmin(user.getRoles().stream().anyMatch(r -> r.getName().equals("ADMIN")))
                 .build();
     }
 

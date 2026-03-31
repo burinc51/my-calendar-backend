@@ -9,4 +9,10 @@ public class JwtResponse {
     private Long expiresIn;
     private String refreshToken;
     private Long refreshExpiresIn;
+    private Long userId;
+    private String username;
+    private String name;
+    private String email;
+    private String pictureUrl;
+    private Boolean isAdmin;
 }

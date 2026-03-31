@@ -2,6 +2,7 @@ package com.mycalendar.dev.service.implement;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.exception.APIException;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.payload.response.JwtResponse;
@@ -59,10 +60,13 @@ public class AuthService implements IAuthService {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(usernameOrEmail, password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(usernameOrEmail);
+            String principal = authentication.getName();
+            UserDetails userDetails = userDetailsService.loadUserByUsername(principal);
             String token = jwtTokenProvider.generateToken(userDetails);
             String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-            return createAccessToken(token, refreshToken);
+            User user = userRepository.findByUsernameOrEmail(principal, principal)
+                    .orElseThrow(() -> new NotFoundException("User", "username/email", principal));
+            return createAccessToken(token, refreshToken, user);
         } catch (AuthenticationException e) {
             throw new RuntimeException("Invalid username or password", e);
         }
@@ -78,7 +82,9 @@ public class AuthService implements IAuthService {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             String newAccessToken = jwtTokenProvider.generateToken(userDetails);
             String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-            return createAccessToken(newAccessToken, newRefreshToken);
+            User user = userRepository.findByUsernameOrEmail(username, username)
+                    .orElseThrow(() -> new NotFoundException("User", "username/email", username));
+            return createAccessToken(newAccessToken, newRefreshToken, user);
         } catch (AuthenticationException e) {
             throw new RuntimeException("Invalid refresh token", e);
         }
@@ -147,12 +153,20 @@ public class AuthService implements IAuthService {
         }
     }
 
-    private JwtResponse createAccessToken(String accessToken, String refreshToken) {
+    private JwtResponse createAccessToken(String accessToken, String refreshToken, User user) {
         JwtResponse jwtResponse = new JwtResponse();
         jwtResponse.setAccessToken(accessToken);
         jwtResponse.setExpiresIn(expiresIn / 1000);
         jwtResponse.setRefreshToken(refreshToken);
         jwtResponse.setRefreshExpiresIn(refreshExpiresIn / 1000);
+        jwtResponse.setUserId(user.getUserId());
+        jwtResponse.setUsername(user.getUsername());
+        jwtResponse.setName(user.getName());
+        jwtResponse.setEmail(user.getEmail());
+        jwtResponse.setPictureUrl(user.getPictureUrl());
+        boolean isAdmin = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(role -> "ADMIN".equalsIgnoreCase(role.getName()));
+        jwtResponse.setIsAdmin(isAdmin);
         return jwtResponse;
     }
 
