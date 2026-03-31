@@ -17,6 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
 
+    @Query(value = "SELECT * FROM users WHERE username = :username LIMIT 1", nativeQuery = true)
+    Optional<User> findByUsernameIncludingInactive(@Param("username") String username);
+
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
@@ -24,6 +27,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findAll(Specification<User> spec, Pageable pageable);
 
     Optional<User> findByEmail(String email);
+
+    @Query(value = "SELECT * FROM users WHERE email = :email LIMIT 1", nativeQuery = true)
+    Optional<User> findByEmailIncludingInactive(@Param("email") String email);
 
     Optional<User> findByResetPasswordToken(String token);
 
