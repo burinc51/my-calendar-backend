@@ -12,6 +12,7 @@ import com.mycalendar.dev.security.JwtTokenProvider;
 import com.mycalendar.dev.service.EmailService;
 import com.mycalendar.dev.service.IAuthService;
 import com.mycalendar.dev.util.EntityMapper;
+import com.mycalendar.dev.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -45,6 +46,7 @@ public class AuthService implements IAuthService {
     private static final long FORGOT_PASSWORD_VERIFY_WINDOW_MILLIS = 10 * 60 * 1000;
     private static final String OTP_PURPOSE_ACCOUNT_ACTIVATION = "ACCOUNT_ACTIVATION";
     private static final String OTP_PURPOSE_FORGOT_PASSWORD = "FORGOT_PASSWORD";
+    private static final String OTP_PURPOSE_ACCOUNT_DELETION = "ACCOUNT_DELETION";
 
     @Value("${app.access.token.expiration.milliseconds}")
     private long expiresIn;
@@ -212,6 +214,54 @@ public class AuthService implements IAuthService {
     }
 
     @Override
+    public void requestDeleteAccountOtp() {
+        User user = getCurrentAuthenticatedUser();
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Account is already inactive.");
+        }
+
+        String otpCode = generateOtpCode();
+        user.setOtpCode(otpCode);
+        user.setOtpExpiredAt(new Date(System.currentTimeMillis() + OTP_EXPIRY_MILLIS));
+        user.setOtpPurpose(OTP_PURPOSE_ACCOUNT_DELETION);
+        user.setOtpVerifiedAt(null);
+        userRepository.save(user);
+
+        sendDeleteAccountOtpEmail(user.getEmail(), user.getName(), otpCode);
+    }
+
+    @Override
+    public void deleteAccountWithOtp(String otpCode) {
+        String normalizedOtp = otpCode == null ? "" : otpCode.trim();
+        User user = getCurrentAuthenticatedUser();
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Account is already inactive.");
+        }
+
+        if (!OTP_PURPOSE_ACCOUNT_DELETION.equals(user.getOtpPurpose())) {
+            throw new IllegalArgumentException("OTP purpose is invalid for account deletion.");
+        }
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(normalizedOtp)) {
+            throw new IllegalArgumentException("Invalid OTP code.");
+        }
+
+        if (user.getOtpExpiredAt() == null || user.getOtpExpiredAt().before(new Date())) {
+            throw new IllegalArgumentException("OTP has expired. Please request a new OTP.");
+        }
+
+        user.setActive(false);
+        user.setOtpCode(null);
+        user.setOtpExpiredAt(null);
+        user.setOtpPurpose(null);
+        user.setOtpVerifiedAt(null);
+        user.setResetPasswordToken(null);
+        userRepository.save(user);
+    }
+
+    @Override
     public void resetPassword(String email, String password) {
         String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         User user = userRepository.findByEmailIncludingInactive(normalizedEmail)
@@ -336,5 +386,26 @@ public class AuthService implements IAuthService {
                 + "Best regards,\nGRPlan App";
 
         emailService.sendSimpleEmail(email, subject, text);
+    }
+
+    private void sendDeleteAccountOtpEmail(String email, String name, String otpCode) {
+        String safeName = name == null || name.isBlank() ? "User" : name;
+        String subject = "Delete Account OTP - GRPlan App";
+        String text = "Hello " + safeName + ",\n\n"
+                + "Your OTP code to delete account is: " + otpCode + "\n"
+                + "This OTP expires in 5 minutes.\n\n"
+                + "If you did not request this, please secure your account immediately.\n\n"
+                + "Best regards,\nGRPlan App";
+        emailService.sendSimpleEmail(email, subject, text);
+    }
+
+    private User getCurrentAuthenticatedUser() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) {
+            throw new APIException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new APIException(HttpStatus.UNAUTHORIZED, "User not found"));
     }
 }

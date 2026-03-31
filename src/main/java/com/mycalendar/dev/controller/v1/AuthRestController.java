@@ -91,6 +91,18 @@ public class AuthRestController {
         return ResponseEntity.ok("OTP resent successfully.");
     }
 
+    @PostMapping("/request-delete-account-otp")
+    public ResponseEntity<String> requestDeleteAccountOtp() {
+        authService.requestDeleteAccountOtp();
+        return ResponseEntity.ok("Delete-account OTP has been sent to your email.");
+    }
+
+    @DeleteMapping(value = "/delete-account", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> deleteAccount(@Valid @RequestBody DeleteAccountRequest request) {
+        authService.deleteAccountWithOtp(request.getOtpCode());
+        return ResponseEntity.ok("Account deleted successfully.");
+    }
+
     @PostMapping(value = "/change-password", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<String> changePassword(@Valid @ModelAttribute ChangePasswordRequest changePasswordRequest) {
         if (changePasswordRequest.getOldPassword().equals(changePasswordRequest.getNewPassword())) {

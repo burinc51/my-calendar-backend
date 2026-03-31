@@ -18,6 +18,10 @@ public interface IAuthService {
 
     void verifyForgotPasswordOtp(String email, String otpCode);
 
+    void requestDeleteAccountOtp();
+
+    void deleteAccountWithOtp(String otpCode);
+
     void resetPassword(String email, String password);
 
     UserResponse getCurrentUser();
