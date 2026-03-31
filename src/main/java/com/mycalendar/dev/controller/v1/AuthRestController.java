@@ -109,12 +109,18 @@ public class AuthRestController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest) {
         authService.forgotPassword(forgotPasswordRequest.getEmail());
-        return ResponseEntity.ok("Password reset link has been sent to your email.");
+        return ResponseEntity.ok("Forgot-password OTP has been sent to your email.");
     }
 
-    @PostMapping(value = "/reset-password", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public ResponseEntity<String> resetPassword(@Valid @ModelAttribute ResetPasswordRequest resetPasswordRequest) {
-        authService.resetPassword(resetPasswordRequest.getToken(), resetPasswordRequest.getPassword());
+    @PostMapping(value = "/verify-forgot-password-otp", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> verifyForgotPasswordOtp(@Valid @RequestBody VerifyForgotPasswordOtpRequest request) {
+        authService.verifyForgotPasswordOtp(request.getEmail(), request.getOtpCode());
+        return ResponseEntity.ok("OTP verified successfully. You can now reset your password.");
+    }
+
+    @PostMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest resetPasswordRequest) {
+        authService.resetPassword(resetPasswordRequest.getEmail(), resetPasswordRequest.getPassword());
         return ResponseEntity.ok("Password reset successfully.");
     }
 

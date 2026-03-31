@@ -53,11 +53,19 @@ public class User extends BaseEntity {
     @Column(name = "otp_expired_at")
     private Date otpExpiredAt;
 
+    @Column(name = "otp_purpose", length = 30)
+    private String otpPurpose;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "otp_verified_at")
+    private Date otpVerifiedAt;
+
     @Temporal(TemporalType.TIMESTAMP)
     private Date activatedDate;
 
     @Column(name = "reset_password_token", length = 32767)
     private String resetPasswordToken;
+
 
     // Relationship with Group (via UserGroup)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -16,7 +16,9 @@ public interface IAuthService {
 
     void forgotPassword(String email);
 
-    void resetPassword(String token, String password);
+    void verifyForgotPasswordOtp(String email, String otpCode);
+
+    void resetPassword(String email, String password);
 
     UserResponse getCurrentUser();
 }

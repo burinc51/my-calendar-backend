@@ -42,6 +42,7 @@ public class UserService implements IUserService {
     private final EmailService emailService;
 
     private static final long OTP_EXPIRY_MILLIS = 5 * 60 * 1000;
+    private static final String OTP_PURPOSE_ACCOUNT_ACTIVATION = "ACCOUNT_ACTIVATION";
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
@@ -67,6 +68,8 @@ public class UserService implements IUserService {
         String otpCode = generateOtpCode();
         user.setOtpCode(otpCode);
         user.setOtpExpiredAt(new Date(System.currentTimeMillis() + OTP_EXPIRY_MILLIS));
+        user.setOtpPurpose(OTP_PURPOSE_ACCOUNT_ACTIVATION);
+        user.setOtpVerifiedAt(null);
         user.setActive(false);
 
         Set<Role> roles = new HashSet<>();
@@ -159,12 +162,12 @@ public class UserService implements IUserService {
 
     private void sendOtpEmail(String email, String name, String otpCode) {
         String safeName = name == null || name.isBlank() ? "User" : name;
-        String subject = "Your OTP Code - My Calendar App";
+        String subject = "Your OTP Code - GRPlan App";
         String text = "Hello " + safeName + ",\n\n"
                 + "Your OTP code is: " + otpCode + "\n"
                 + "This OTP expires in 5 minutes.\n\n"
                 + "If you did not request this, please ignore this email.\n\n"
-                + "Best regards,\nMy Calendar App";
+                + "Best regards,\nGRPlan App";
         emailService.sendSimpleEmail(email, subject, text);
     }
 }

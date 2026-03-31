@@ -42,6 +42,9 @@ public class AuthService implements IAuthService {
     private final EmailService emailService;
 
     private static final long OTP_EXPIRY_MILLIS = 5 * 60 * 1000;
+    private static final long FORGOT_PASSWORD_VERIFY_WINDOW_MILLIS = 10 * 60 * 1000;
+    private static final String OTP_PURPOSE_ACCOUNT_ACTIVATION = "ACCOUNT_ACTIVATION";
+    private static final String OTP_PURPOSE_FORGOT_PASSWORD = "FORGOT_PASSWORD";
 
     @Value("${app.access.token.expiration.milliseconds}")
     private long expiresIn;
@@ -112,9 +115,15 @@ public class AuthService implements IAuthService {
             throw new IllegalArgumentException("OTP has expired. Please request a new OTP.");
         }
 
+        if (!OTP_PURPOSE_ACCOUNT_ACTIVATION.equals(user.getOtpPurpose())) {
+            throw new IllegalArgumentException("OTP purpose is invalid for account activation.");
+        }
+
         user.setActive(true);
         user.setOtpCode(null);
         user.setOtpExpiredAt(null);
+        user.setOtpPurpose(null);
+        user.setOtpVerifiedAt(null);
         user.setActivatedDate(new Date());
 
         userRepository.save(user);
@@ -133,6 +142,8 @@ public class AuthService implements IAuthService {
         String otpCode = generateOtpCode();
         user.setOtpCode(otpCode);
         user.setOtpExpiredAt(new Date(System.currentTimeMillis() + OTP_EXPIRY_MILLIS));
+        user.setOtpPurpose(OTP_PURPOSE_ACCOUNT_ACTIVATION);
+        user.setOtpVerifiedAt(null);
         userRepository.save(user);
 
         sendOtpEmail(user.getEmail(), user.getName(), otpCode);
@@ -152,23 +163,82 @@ public class AuthService implements IAuthService {
 
     @Override
     public void forgotPassword(String email) {
-        var user = userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User", "email", email));
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-        user.setResetPasswordToken(jwtTokenProvider.generateResetPasswordToken(userDetails));
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        User user = userRepository.findByEmailIncludingInactive(normalizedEmail)
+                .orElseThrow(() -> new NotFoundException("User", "email", normalizedEmail));
 
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Account is not activated.");
+        }
+
+        String otpCode = generateOtpCode();
+        user.setOtpCode(otpCode);
+        user.setOtpExpiredAt(new Date(System.currentTimeMillis() + OTP_EXPIRY_MILLIS));
+        user.setOtpPurpose(OTP_PURPOSE_FORGOT_PASSWORD);
+        user.setOtpVerifiedAt(null);
+        userRepository.save(user);
+
+        sendForgotPasswordOtpEmail(user.getEmail(), user.getName(), otpCode);
+    }
+
+    @Override
+    public void verifyForgotPasswordOtp(String email, String otpCode) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        String normalizedOtp = otpCode == null ? "" : otpCode.trim();
+
+        User user = userRepository.findByEmailIncludingInactive(normalizedEmail)
+                .orElseThrow(() -> new NotFoundException("User", "email", normalizedEmail));
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Account is not activated.");
+        }
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(normalizedOtp)) {
+            throw new IllegalArgumentException("Invalid OTP code.");
+        }
+
+        if (user.getOtpExpiredAt() == null || user.getOtpExpiredAt().before(new Date())) {
+            throw new IllegalArgumentException("OTP has expired. Please request a new OTP.");
+        }
+
+        if (!OTP_PURPOSE_FORGOT_PASSWORD.equals(user.getOtpPurpose())) {
+            throw new IllegalArgumentException("OTP purpose is invalid for forgot-password flow.");
+        }
+
+        user.setOtpVerifiedAt(new Date());
+        user.setOtpCode(null);
+        user.setOtpExpiredAt(null);
         userRepository.save(user);
     }
 
     @Override
-    public void resetPassword(String token, String password) {
-        var user = userRepository.findByResetPasswordToken(token).orElseThrow(() -> new NotFoundException("User", "token", token));
+    public void resetPassword(String email, String password) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        User user = userRepository.findByEmailIncludingInactive(normalizedEmail)
+                .orElseThrow(() -> new NotFoundException("User", "email", normalizedEmail));
 
-        if (jwtTokenProvider.isResetPasswordExpired(token)) {
-            throw new IllegalArgumentException("Token has expired");
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Account is not activated.");
+        }
+
+        if (!OTP_PURPOSE_FORGOT_PASSWORD.equals(user.getOtpPurpose())) {
+            throw new IllegalArgumentException("Forgot-password OTP has not been verified.");
+        }
+
+        if (user.getOtpVerifiedAt() == null) {
+            throw new IllegalArgumentException("OTP has not been verified.");
+        }
+
+        Date verifiedAt = user.getOtpVerifiedAt();
+        if (verifiedAt.before(new Date(System.currentTimeMillis() - FORGOT_PASSWORD_VERIFY_WINDOW_MILLIS))) {
+            throw new IllegalArgumentException("OTP verification has expired. Please verify OTP again.");
         }
 
         user.setPassword(passwordEncoder.encode(password));
-        user.setResetPasswordToken(null);
+        user.setOtpVerifiedAt(null);
+        user.setOtpCode(null);
+        user.setOtpExpiredAt(null);
+        user.setOtpPurpose(null);
 
         userRepository.save(user);
     }
@@ -247,12 +317,24 @@ public class AuthService implements IAuthService {
 
     private void sendOtpEmail(String email, String name, String otpCode) {
         String safeName = name == null || name.isBlank() ? "User" : name;
-        String subject = "Your OTP Code - My Calendar App";
+        String subject = "Your OTP Code - GRPlan App";
         String text = "Hello " + safeName + ",\n\n"
                 + "Your OTP code is: " + otpCode + "\n"
                 + "This OTP expires in 5 minutes.\n\n"
                 + "If you did not request this, please ignore this email.\n\n"
-                + "Best regards,\nMy Calendar App";
+                + "Best regards,\nGRPlan App";
+        emailService.sendSimpleEmail(email, subject, text);
+    }
+
+    private void sendForgotPasswordOtpEmail(String email, String name, String otpCode) {
+        String safeName = name == null || name.isBlank() ? "User" : name;
+        String subject = "Forgot Password OTP - GRPlan App";
+        String text = "Hello " + safeName + ",\n\n"
+                + "Your forgot-password OTP code is: " + otpCode + "\n"
+                + "This OTP expires in 5 minutes.\n\n"
+                + "If you did not request this, you can safely ignore this email.\n\n"
+                + "Best regards,\nGRPlan App";
+
         emailService.sendSimpleEmail(email, subject, text);
     }
 }
