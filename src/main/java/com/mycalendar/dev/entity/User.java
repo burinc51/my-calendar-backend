@@ -46,7 +46,12 @@ public class User extends BaseEntity {
     )
     private Set<Role> roles;
 
-    private String activateCode;
+    @Column(name = "otp_code", length = 10)
+    private String otpCode;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "otp_expired_at")
+    private Date otpExpiredAt;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date activatedDate;

@@ -8,7 +8,9 @@ public interface IAuthService {
 
     JwtResponse refreshAccessToken(String refreshToken);
 
-    void activateAccount(String activateCode);
+    void verifyOtp(String email, String otpCode);
+
+    void resendOtp(String email);
 
     void changePassword(String usernameOrEmail, String oldPassword, String password);
 

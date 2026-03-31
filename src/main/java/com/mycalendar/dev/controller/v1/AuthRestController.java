@@ -27,9 +27,9 @@ public class AuthRestController {
         this.googleAuthService = googleAuthService;
     }
 
-    @PostMapping(value = "/sign-in", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public ResponseEntity<?> login(@Valid @ModelAttribute SignInRequest signInRequest) {
-        JwtResponse jwtResponse = authService.signIn(signInRequest.getUsernameOrEmail(), signInRequest.getPassword());
+    @PostMapping(value = "/sign-in", consumes = { MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<?> login(@Valid @RequestBody(required = false) SignInRequest request) {
+        JwtResponse jwtResponse = authService.signIn(request.getUsernameOrEmail(), request.getPassword());
 
         return ResponseEntity.ok(jwtResponse);
     }
@@ -79,10 +79,16 @@ public class AuthRestController {
         return ResponseEntity.ok("Refresh Token Revoked Successfully.");
     }
 
-    @GetMapping("/activate-account/{activateCode}")
-    public ResponseEntity<String> activateAccount(@PathVariable String activateCode) {
-        authService.activateAccount(activateCode);
-        return ResponseEntity.ok("Account activated successfully.");
+    @PostMapping(value = "/verify-otp", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request.getEmail(), request.getOtpCode());
+        return ResponseEntity.ok("OTP verified successfully. Account activated.");
+    }
+
+    @PostMapping(value = "/resend-otp", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        authService.resendOtp(request.getEmail());
+        return ResponseEntity.ok("OTP resent successfully.");
     }
 
     @PostMapping(value = "/change-password", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)

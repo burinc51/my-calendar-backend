@@ -9,6 +9,7 @@ import com.mycalendar.dev.payload.response.JwtResponse;
 import com.mycalendar.dev.payload.response.UserResponse;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.security.JwtTokenProvider;
+import com.mycalendar.dev.service.EmailService;
 import com.mycalendar.dev.service.IAuthService;
 import com.mycalendar.dev.util.EntityMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class AuthService implements IAuthService {
@@ -36,6 +39,9 @@ public class AuthService implements IAuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+
+    private static final long OTP_EXPIRY_MILLIS = 5 * 60 * 1000;
 
     @Value("${app.access.token.expiration.milliseconds}")
     private long expiresIn;
@@ -46,12 +52,13 @@ public class AuthService implements IAuthService {
     @Value("${app.google.client-id}")
     private String googleClientId;
 
-    public AuthService(AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtTokenProvider jwtTokenProvider, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtTokenProvider jwtTokenProvider, UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     @Override
@@ -91,14 +98,44 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    public void activateAccount(String activateCode) {
-        var user = userRepository.findByActivateCode(activateCode)
-                .orElseThrow(() -> new NotFoundException("User", "activate code", activateCode));
+    public void verifyOtp(String email, String otpCode) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        String normalizedOtp = otpCode == null ? "" : otpCode.trim();
+        var user = userRepository.findByEmailAndOtpCodeIncludingInactive(normalizedEmail, normalizedOtp)
+                .orElseThrow(() -> new NotFoundException("User", "email/otp", normalizedEmail));
+
+        if (Boolean.TRUE.equals(user.isActive())) {
+            throw new IllegalArgumentException("Account is already activated.");
+        }
+
+        if (user.getOtpExpiredAt() == null || user.getOtpExpiredAt().before(new Date())) {
+            throw new IllegalArgumentException("OTP has expired. Please request a new OTP.");
+        }
+
         user.setActive(true);
-        user.setActivateCode(null);
+        user.setOtpCode(null);
+        user.setOtpExpiredAt(null);
         user.setActivatedDate(new Date());
 
         userRepository.save(user);
+    }
+
+    @Override
+    public void resendOtp(String email) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        User user = userRepository.findByEmailIncludingInactive(normalizedEmail)
+                .orElseThrow(() -> new NotFoundException("User", "email", normalizedEmail));
+
+        if (user.isActive()) {
+            throw new IllegalArgumentException("Account is already activated.");
+        }
+
+        String otpCode = generateOtpCode();
+        user.setOtpCode(otpCode);
+        user.setOtpExpiredAt(new Date(System.currentTimeMillis() + OTP_EXPIRY_MILLIS));
+        userRepository.save(user);
+
+        sendOtpEmail(user.getEmail(), user.getName(), otpCode);
     }
 
     @Override
@@ -201,5 +238,21 @@ public class AuthService implements IAuthService {
             // Use logger or handle exception properly
             return null;
         }
+    }
+
+    private String generateOtpCode() {
+        int otp = ThreadLocalRandom.current().nextInt(100000, 1000000);
+        return String.valueOf(otp);
+    }
+
+    private void sendOtpEmail(String email, String name, String otpCode) {
+        String safeName = name == null || name.isBlank() ? "User" : name;
+        String subject = "Your OTP Code - My Calendar App";
+        String text = "Hello " + safeName + ",\n\n"
+                + "Your OTP code is: " + otpCode + "\n"
+                + "This OTP expires in 5 minutes.\n\n"
+                + "If you did not request this, please ignore this email.\n\n"
+                + "Best regards,\nMy Calendar App";
+        emailService.sendSimpleEmail(email, subject, text);
     }
 }

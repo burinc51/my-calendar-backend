@@ -27,7 +27,7 @@ public class UserRestController {
     @PostMapping()
     public ResponseEntity<String> create(@Valid @RequestBody SignUpRequest signUpRequest) {
         userService.create(signUpRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully.");
+        return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully. OTP has been sent to your email.");
     }
 
     @PostMapping("/add-role/{userId}/{roleId}")

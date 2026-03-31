@@ -33,8 +33,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByResetPasswordToken(String token);
 
-    @Query(value = "select * from users where activate_code = :activateCode", nativeQuery = true)
-    Optional<User> findByActivateCode(@Param("activateCode") String activateCode);
+    @Query(value = "SELECT * FROM users WHERE email = :email AND otp_code = :otpCode LIMIT 1", nativeQuery = true)
+    Optional<User> findByEmailAndOtpCodeIncludingInactive(@Param("email") String email, @Param("otpCode") String otpCode);
 
     @Query("SELECT u.userId FROM User u WHERE u.username = :username")
     Long findIdByUsername(@Param("username") String username);

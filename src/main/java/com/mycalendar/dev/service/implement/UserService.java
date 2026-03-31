@@ -10,6 +10,7 @@ import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.payload.response.UserResponse;
 import com.mycalendar.dev.repository.RoleRepository;
 import com.mycalendar.dev.repository.UserRepository;
+import com.mycalendar.dev.service.EmailService;
 import com.mycalendar.dev.service.IUserService;
 import com.mycalendar.dev.util.EntityMapper;
 import com.mycalendar.dev.util.GenericSpecification;
@@ -26,8 +27,10 @@ import com.mycalendar.dev.util.FileHandler;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
+import java.util.Date;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,25 +39,34 @@ public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
-    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    private static final long OTP_EXPIRY_MILLIS = 5 * 60 * 1000;
+
+    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     @Override
     public void create(SignUpRequest signUpRequest) {
+        String normalizedEmail = signUpRequest.getEmail().trim().toLowerCase(Locale.ROOT);
+
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             throw new DataExistsException("username", signUpRequest.getUsername());
         }
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            throw new DataExistsException("email", signUpRequest.getEmail());
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new DataExistsException("email", normalizedEmail);
         }
 
         User user = EntityMapper.mapToEntity(signUpRequest, User.class);
         user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        user.setActivateCode(UUID.randomUUID().toString());
+        user.setEmail(normalizedEmail);
+        String otpCode = generateOtpCode();
+        user.setOtpCode(otpCode);
+        user.setOtpExpiredAt(new Date(System.currentTimeMillis() + OTP_EXPIRY_MILLIS));
         user.setActive(false);
 
         Set<Role> roles = new HashSet<>();
@@ -67,7 +79,8 @@ public class UserService implements IUserService {
 
         user.setRoles(roles);
 
-        userRepository.save(user);
+        User saved = userRepository.save(user);
+        sendOtpEmail(saved.getEmail(), saved.getName(), otpCode);
     }
 
     @Override
@@ -137,5 +150,21 @@ public class UserService implements IUserService {
         Role role = roleRepository.findById(roleId).orElseThrow(() -> new NotFoundException("Role", "id", roleId.toString()));
         user.getRoles().remove(role);
         userRepository.save(user);
+    }
+
+    private String generateOtpCode() {
+        int otp = ThreadLocalRandom.current().nextInt(100000, 1000000);
+        return String.valueOf(otp);
+    }
+
+    private void sendOtpEmail(String email, String name, String otpCode) {
+        String safeName = name == null || name.isBlank() ? "User" : name;
+        String subject = "Your OTP Code - My Calendar App";
+        String text = "Hello " + safeName + ",\n\n"
+                + "Your OTP code is: " + otpCode + "\n"
+                + "This OTP expires in 5 minutes.\n\n"
+                + "If you did not request this, please ignore this email.\n\n"
+                + "Best regards,\nMy Calendar App";
+        emailService.sendSimpleEmail(email, subject, text);
     }
 }
