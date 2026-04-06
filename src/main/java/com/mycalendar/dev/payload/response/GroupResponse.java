@@ -11,7 +11,6 @@ public record GroupResponse(
         String icon,
         String color,
         String bg,
-        String inviteCode,
         List<GroupUserResponse> members
 ) {
 }

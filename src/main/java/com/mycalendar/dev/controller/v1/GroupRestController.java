@@ -103,10 +103,4 @@ public class GroupRestController {
         ));
     }
 
-    @PostMapping("/join")
-    public ResponseEntity<GroupResponse> joinGroup(@RequestBody Map<String, String> request) {
-        String inviteCode = request.get("inviteCode");
-        GroupResponse response = groupService.joinByCode(inviteCode);
-        return ResponseEntity.ok(response);
-    }
 }

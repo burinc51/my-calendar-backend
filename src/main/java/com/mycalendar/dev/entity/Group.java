@@ -31,8 +31,6 @@ public class Group {
     @Column(name = "bg_color", length = 50)
     private String bg;
 
-    @Column(name = "invite_code", length = 6, unique = true)
-    private String inviteCode;
 
     // Relationship with user (via UserGroup)
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)

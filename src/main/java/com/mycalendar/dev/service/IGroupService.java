@@ -31,7 +31,6 @@ public interface IGroupService {
 
     void deleteGroup(Long id, Long requestUserId);
 
-    GroupResponse joinByCode(String inviteCode);
 
     GroupInvitationBatchResponse inviteUsers(Long groupId, GroupInviteUsersRequest request);
 
