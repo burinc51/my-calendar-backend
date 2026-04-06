@@ -1,37 +1,46 @@
 package com.mycalendar.dev.service.implement;
 
 import com.mycalendar.dev.entity.Group;
+import com.mycalendar.dev.entity.GroupInvitation;
 import com.mycalendar.dev.entity.Permission;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.entity.UserGroup;
+import com.mycalendar.dev.enums.GroupInvitationStatus;
 import com.mycalendar.dev.exception.ForbiddenException;
 import com.mycalendar.dev.exception.NotFoundException;
 import com.mycalendar.dev.mapper.GroupMapper;
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
+import com.mycalendar.dev.payload.request.GroupInviteUsersRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
+import com.mycalendar.dev.payload.response.GroupInvitationBatchResponse;
+import com.mycalendar.dev.payload.response.GroupInvitationResponse;
+import com.mycalendar.dev.payload.response.GroupInvitationSkipResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.projection.GroupProjection;
 import com.mycalendar.dev.repository.GroupRepository;
+import com.mycalendar.dev.repository.GroupInvitationRepository;
 import com.mycalendar.dev.repository.PermissionRepository;
 import com.mycalendar.dev.repository.UserGroupRepository;
 import com.mycalendar.dev.repository.UserRepository;
 import com.mycalendar.dev.service.IActivityLogService;
 import com.mycalendar.dev.service.IGroupService;
-import jakarta.transaction.Transactional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import com.mycalendar.dev.exception.APIException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Random;
+import java.time.LocalDateTime;
 
 @Service
 public class GroupService implements IGroupService {
@@ -39,15 +48,18 @@ public class GroupService implements IGroupService {
     private final UserRepository userRepository;
     private final PermissionRepository permissionRepository;
     private final GroupRepository groupRepository;
+    private final GroupInvitationRepository groupInvitationRepository;
     private final UserGroupRepository userGroupRepository;
     private final IActivityLogService activityLogService;
 
     public GroupService(UserRepository userRepository, PermissionRepository permissionRepository,
-                        GroupRepository groupRepository, UserGroupRepository userGroupRepository,
+                        GroupRepository groupRepository, GroupInvitationRepository groupInvitationRepository,
+                        UserGroupRepository userGroupRepository,
                         IActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.permissionRepository = permissionRepository;
         this.groupRepository = groupRepository;
+        this.groupInvitationRepository = groupInvitationRepository;
         this.userGroupRepository = userGroupRepository;
         this.activityLogService = activityLogService;
     }
@@ -222,24 +234,6 @@ public class GroupService implements IGroupService {
                 .toList();
     }
 
-    private String getInitialText(String name) {
-        if (name == null || name.isEmpty()) {
-            return "?";
-        }
-        return name.substring(0, 1).toUpperCase();
-    }
-
-    private String getAvatarColor(Long userId) {
-        return switch(Math.toIntExact(userId % 5)) {
-            case 0 -> "#c084fc";
-            case 1 -> "#818cf8";
-            case 2 -> "#14b8a6";
-            case 3 -> "#f97316";
-            case 4 -> "#ec4899";
-            default -> "#94a3b8";
-        };
-    }
-
     @Override
     @Transactional
     public void removeMember(Long groupId, Long userId) {
@@ -328,6 +322,198 @@ public class GroupService implements IGroupService {
         return GroupMapper.mapToDto(group);
     }
 
+    @Override
+    @Transactional
+    public GroupInvitationBatchResponse inviteUsers(Long groupId, GroupInviteUsersRequest request) {
+        if (request == null || request.getUserIds() == null || request.getUserIds().isEmpty()) {
+            throw new APIException(HttpStatus.BAD_REQUEST, "userIds is required");
+        }
+
+        Long inviterUserId = resolveCurrentUserId();
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new NotFoundException("Group", "id", groupId.toString()));
+        User inviter = userRepository.findById(inviterUserId)
+                .orElseThrow(() -> new NotFoundException("User", "id", inviterUserId.toString()));
+
+        ensureAdminMember(groupId, inviterUserId);
+
+        LinkedHashSet<Long> uniqueUserIds = new LinkedHashSet<>(request.getUserIds());
+        List<GroupInvitationResponse> invitations = new ArrayList<>();
+        List<GroupInvitationSkipResponse> skipped = new ArrayList<>();
+
+        for (Long invitedUserId : uniqueUserIds) {
+            if (invitedUserId == null) {
+                skipped.add(GroupInvitationSkipResponse.builder()
+                        .userId(null)
+                        .reason("userId is required")
+                        .build());
+                continue;
+            }
+
+            if (invitedUserId.equals(inviterUserId)) {
+                skipped.add(GroupInvitationSkipResponse.builder()
+                        .userId(invitedUserId)
+                        .reason("Cannot invite yourself")
+                        .build());
+                continue;
+            }
+
+            User invitedUser = userRepository.findById(invitedUserId)
+                    .orElse(null);
+            if (invitedUser == null) {
+                skipped.add(GroupInvitationSkipResponse.builder()
+                        .userId(invitedUserId)
+                        .reason("User not found")
+                        .build());
+                continue;
+            }
+
+            if (userGroupRepository.existsByUserUserIdAndGroupGroupId(invitedUserId, groupId)) {
+                skipped.add(GroupInvitationSkipResponse.builder()
+                        .userId(invitedUserId)
+                        .reason("User is already a member")
+                        .build());
+                continue;
+            }
+
+            if (groupInvitationRepository.existsByGroupGroupIdAndInvitedUserUserIdAndStatus(
+                    groupId, invitedUserId, GroupInvitationStatus.PENDING)) {
+                skipped.add(GroupInvitationSkipResponse.builder()
+                        .userId(invitedUserId)
+                        .reason("Invitation already pending")
+                        .build());
+                continue;
+            }
+
+            GroupInvitation invitation = new GroupInvitation();
+            invitation.setGroup(group);
+            invitation.setInviterUser(inviter);
+            invitation.setInvitedUser(invitedUser);
+            invitation.setStatus(GroupInvitationStatus.PENDING);
+            invitation.setInvitedAt(LocalDateTime.now());
+            invitation = groupInvitationRepository.save(invitation);
+
+            activityLogService.record(
+                    group.getGroupId(),
+                    inviterUserId,
+                    "INVITATION_SENT",
+                    null,
+                    null,
+                    invitedUser.getUserId(),
+                    invitedUser.getName(),
+                    invitation.getInvitationId(),
+                    false
+            );
+
+            invitations.add(toInvitationResponse(invitation));
+        }
+
+        return GroupInvitationBatchResponse.builder()
+                .groupId(groupId)
+                .invitedCount(invitations.size())
+                .skippedCount(skipped.size())
+                .invitations(invitations)
+                .skipped(skipped)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GroupInvitationResponse> getPendingInvitations(Long groupId) {
+        Long userId = resolveCurrentUserId();
+
+        List<GroupInvitation> invitations;
+        if (groupId != null) {
+            ensureAdminMember(groupId, userId);
+            invitations = groupInvitationRepository.findByGroupGroupIdAndStatusOrderByInvitedAtDesc(groupId, GroupInvitationStatus.PENDING);
+        } else {
+            invitations = groupInvitationRepository.findByInvitedUserUserIdAndStatusOrderByInvitedAtDesc(userId, GroupInvitationStatus.PENDING);
+        }
+
+        return invitations
+                .stream()
+                .map(this::toInvitationResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public GroupInvitationResponse acceptInvitation(Long invitationId) {
+        Long userId = resolveCurrentUserId();
+        GroupInvitation invitation = groupInvitationRepository.findByInvitationIdAndInvitedUserUserId(invitationId, userId)
+                .orElseThrow(() -> new NotFoundException("GroupInvitation", "id", invitationId.toString()));
+
+        if (invitation.getStatus() == GroupInvitationStatus.ACCEPTED) {
+            return toInvitationResponse(invitation);
+        }
+        if (invitation.getStatus() == GroupInvitationStatus.REJECTED) {
+            throw new APIException(HttpStatus.CONFLICT, "Invitation has already been rejected");
+        }
+
+        Long groupId = invitation.getGroup().getGroupId();
+        if (!userGroupRepository.existsByUserUserIdAndGroupGroupId(userId, groupId)) {
+            Permission memberPermission = permissionRepository.findByPermissionName("MEMBER")
+                    .orElseThrow(() -> new NotFoundException("Permission", "name", "MEMBER"));
+
+            UserGroup userGroup = new UserGroup();
+            userGroup.setUser(invitation.getInvitedUser());
+            userGroup.setGroup(invitation.getGroup());
+            userGroup.setPermission(memberPermission);
+            userGroupRepository.save(userGroup);
+        }
+
+        invitation.setStatus(GroupInvitationStatus.ACCEPTED);
+        invitation.setRespondedAt(LocalDateTime.now());
+        invitation = groupInvitationRepository.save(invitation);
+
+        activityLogService.record(
+                groupId,
+                userId,
+                "INVITATION_ACCEPTED",
+                null,
+                null,
+                invitation.getInvitedUser().getUserId(),
+                invitation.getInvitedUser().getName(),
+                invitation.getInvitationId(),
+                false
+        );
+
+        return toInvitationResponse(invitation);
+    }
+
+    @Override
+    @Transactional
+    public GroupInvitationResponse rejectInvitation(Long invitationId) {
+        Long userId = resolveCurrentUserId();
+        GroupInvitation invitation = groupInvitationRepository.findByInvitationIdAndInvitedUserUserId(invitationId, userId)
+                .orElseThrow(() -> new NotFoundException("GroupInvitation", "id", invitationId.toString()));
+
+        if (invitation.getStatus() == GroupInvitationStatus.REJECTED) {
+            return toInvitationResponse(invitation);
+        }
+        if (invitation.getStatus() == GroupInvitationStatus.ACCEPTED) {
+            throw new APIException(HttpStatus.CONFLICT, "Invitation has already been accepted");
+        }
+
+        invitation.setStatus(GroupInvitationStatus.REJECTED);
+        invitation.setRespondedAt(LocalDateTime.now());
+        invitation = groupInvitationRepository.save(invitation);
+
+        activityLogService.record(
+                invitation.getGroup().getGroupId(),
+                userId,
+                "INVITATION_REJECTED",
+                null,
+                null,
+                invitation.getInvitedUser().getUserId(),
+                invitation.getInvitedUser().getName(),
+                invitation.getInvitationId(),
+                false
+        );
+
+        return toInvitationResponse(invitation);
+    }
+
     private String generateUniqueInviteCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         Random random = new Random();
@@ -340,6 +526,32 @@ public class GroupService implements IGroupService {
             code = sb.toString();
         } while (groupRepository.findByInviteCode(code).isPresent());
         return code;
+    }
+
+    private void ensureAdminMember(Long groupId, Long userId) {
+        UserGroup userGroup = userGroupRepository.findByUserUserIdAndGroupGroupId(userId, groupId)
+                .orElseThrow(() -> new ForbiddenException("You do not have permission to manage invitations for this group"));
+
+        if (userGroup.getPermission() == null
+                || userGroup.getPermission().getPermissionName() == null
+                || !userGroup.getPermission().getPermissionName().equalsIgnoreCase("ADMIN")) {
+            throw new ForbiddenException("You do not have permission to manage invitations for this group");
+        }
+    }
+
+    private GroupInvitationResponse toInvitationResponse(GroupInvitation invitation) {
+        return GroupInvitationResponse.builder()
+                .invitationId(invitation.getInvitationId())
+                .groupId(invitation.getGroup() == null ? null : invitation.getGroup().getGroupId())
+                .groupName(invitation.getGroup() == null ? null : invitation.getGroup().getGroupName())
+                .inviterUserId(invitation.getInviterUser() == null ? null : invitation.getInviterUser().getUserId())
+                .inviterName(invitation.getInviterUser() == null ? null : invitation.getInviterUser().getName())
+                .invitedUserId(invitation.getInvitedUser() == null ? null : invitation.getInvitedUser().getUserId())
+                .invitedUserName(invitation.getInvitedUser() == null ? null : invitation.getInvitedUser().getName())
+                .status(invitation.getStatus())
+                .invitedAt(invitation.getInvitedAt())
+                .respondedAt(invitation.getRespondedAt())
+                .build();
     }
 
     private String buildGroupUpdateDetail(Group currentGroup, GroupRequest request) {

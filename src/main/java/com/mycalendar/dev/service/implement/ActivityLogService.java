@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,27 +47,60 @@ public class ActivityLogService implements IActivityLogService {
     /**
      * Record an activity entry and optionally broadcast a push notification
      * to all group members (except the actor who triggered the action).
-     *
      * Pass skipActivityPush=true when the creator is the only assignee —
      * no one else needs to be notified about the event creation.
      */
     @Override
+    @Transactional
     public void record(Long groupId, Long actorId,
                        String actionType,
                        Long eventId, String eventTitle,
                        Long targetUserId, String targetUserName,
                        boolean skipActivityPush) {
-        record(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, null, skipActivityPush);
+        recordInternal(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, null, null, skipActivityPush);
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
+    public void record(Long groupId, Long actorId,
+                       String actionType,
+                       Long eventId, String eventTitle,
+                       Long targetUserId, String targetUserName,
+                       Long invitationId,
+                       boolean skipActivityPush) {
+        recordInternal(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, null, invitationId, skipActivityPush);
+    }
+
+    @Override
+    @Transactional
     public void record(Long groupId, Long actorId,
                        String actionType,
                        Long eventId, String eventTitle,
                        Long targetUserId, String targetUserName,
                        String actionDetail,
                        boolean skipActivityPush) {
+        recordInternal(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, actionDetail, null, skipActivityPush);
+    }
+
+    @Override
+    @Transactional
+    public void record(Long groupId, Long actorId,
+                       String actionType,
+                       Long eventId, String eventTitle,
+                       Long targetUserId, String targetUserName,
+                       String actionDetail,
+                       Long invitationId,
+                       boolean skipActivityPush) {
+        recordInternal(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, actionDetail, invitationId, skipActivityPush);
+    }
+
+    private void recordInternal(Long groupId, Long actorId,
+                                String actionType,
+                                Long eventId, String eventTitle,
+                                Long targetUserId, String targetUserName,
+                                String actionDetail,
+                                Long invitationId,
+                                boolean skipActivityPush) {
 
         // Resolve actor snapshot (name + avatar) so feed stays stable over time.
         String actorName = "Unknown";
@@ -95,8 +127,8 @@ public class ActivityLogService implements IActivityLogService {
         activityLog.setTargetUserId(targetUserId);
         activityLog.setTargetUserName(targetUserName);
         activityLog.setActionDetail(actionDetail);
+        activityLog.setInvitationId(invitationId);
         activityLogRepository.save(activityLog);
-
         // Skip push when creator is the only assignee (no one else to notify)
         if (skipActivityPush) {
             log.debug("⏭️ Skipping activity push for {} — creator is the only assignee", actionType);
@@ -109,48 +141,48 @@ public class ActivityLogService implements IActivityLogService {
     }
 
     /**
-     * Sends a push notification to every group member who is NOT the actor.
+     * Sends a push notification to the right audience for each activity type.
      *
      * Notification format examples:
      *  - EVENT_CREATED : "แคว สร้างกิจกรรม 'ประชุม'"
-     *  - EVENT_UPDATED : "แคว แก้ไขกิจกรรม 'ประชุม'"
-     *  - EVENT_DELETED : "แคว ลบกิจกรรม 'ประชุม'"
-     *  - MEMBER_ADDED  : "แคว เพิ่มสมาชิก ต้น เข้ากลุ่ม"
-     *  - MEMBER_REMOVED: "แคว ลบสมาชิก ต้น ออกจากกลุ่ม"
-     *  - GROUP_CREATED : "แคว สร้างกลุ่มใหม่"
-     *  - GROUP_DELETED : "แคว ลบกลุ่ม"
+     *  - MEMBER_ADDED  : "ต้น ใหม่ เข้ากลุ่ม Team"
+     *  - INVITATION_SENT : "แคว เชิญ ต้น เข้าร่วมกลุ่ม Team"
      */
     private void sendActivityPushNotification(Long groupId, Long actorId, String actorName,
                                                String actionType, String eventTitle,
                                                Long targetUserId, String targetUserName) {
         try {
-            // Build recipient list from current members, excluding actor.
-            List<Long> memberIds = new ArrayList<>(userGroupRepository.findUserIdsByGroupId(groupId)
-                    .stream()
-                    .filter(id -> !id.equals(actorId))
-                    // For MEMBER_ADDED, never notify the newly added member about their own join.
-                    .filter(id -> !("MEMBER_ADDED".equals(actionType)
-                            && targetUserId != null
-                            && id.equals(targetUserId)))
-                    .toList());
+            List<Long> recipientIds = new ArrayList<>();
 
-            // For MEMBER_REMOVED, include the removed user so they know why the group disappeared.
-            if ("MEMBER_REMOVED".equals(actionType)
-                    && targetUserId != null
-                    && !targetUserId.equals(actorId)
-                    && !memberIds.contains(targetUserId)) {
-                memberIds.add(targetUserId);
+            if ("INVITATION_SENT".equals(actionType)) {
+                if (targetUserId != null && !targetUserId.equals(actorId)) {
+                    recipientIds.add(targetUserId);
+                }
+            } else {
+                recipientIds.addAll(userGroupRepository.findUserIdsByGroupId(groupId)
+                        .stream()
+                        .filter(id -> !id.equals(actorId))
+                            .filter(id -> !("MEMBER_ADDED".equals(actionType)
+                                    && id.equals(targetUserId)))
+                        .toList());
+
+                if ("MEMBER_REMOVED".equals(actionType)
+                        && targetUserId != null
+                        && !targetUserId.equals(actorId)
+                        && !recipientIds.contains(targetUserId)) {
+                    recipientIds.add(targetUserId);
+                }
             }
 
-            if (memberIds.isEmpty()) {
+            if (recipientIds.isEmpty()) {
                 log.debug("No members to notify for group {} [{}]", groupId, actionType);
                 return;
             }
 
             // Get active push tokens for all those members
-            List<PushToken> tokens = pushTokenRepository.findActiveTokensByUserIds(memberIds);
+            List<PushToken> tokens = pushTokenRepository.findActiveTokensByUserIds(recipientIds);
             if (tokens.isEmpty()) {
-                log.debug("No active push tokens for group {} members", groupId);
+                log.debug("No active push tokens for recipients of group {} [{}]", groupId, actionType);
                 return;
             }
 
@@ -191,6 +223,9 @@ public class ActivityLogService implements IActivityLogService {
             case "EVENT_DELETED"  -> "🗑️ กิจกรรมถูกลบ";
             case "MEMBER_ADDED"   -> "👤 เพิ่มสมาชิกใหม่";
             case "MEMBER_REMOVED" -> "👤 สมาชิกถูกลบ";
+            case "INVITATION_SENT" -> "✉️ คำเชิญเข้ากลุ่ม";
+            case "INVITATION_ACCEPTED" -> "✅ รับคำเชิญแล้ว";
+            case "INVITATION_REJECTED" -> "❌ ปฏิเสธคำเชิญ";
             case "GROUP_CREATED"  -> "🎉 สร้างกลุ่มใหม่";
             case "GROUP_UPDATED"  -> "✏️ กลุ่มถูกแก้ไข";
             case "GROUP_DELETED"  -> "🗑️ กลุ่มถูกลบ";
@@ -210,6 +245,9 @@ public class ActivityLogService implements IActivityLogService {
             case "EVENT_DELETED"  -> actorName + " ลบกิจกรรม \"" + eventTitle + "\"";
             case "MEMBER_ADDED"   -> targetUserName + " ใหม่ เข้ากลุ่ม " + groupName;
             case "MEMBER_REMOVED" -> actorName + " ลบสมาชิก " + targetUserName + " ออกจากกลุ่ม";
+            case "INVITATION_SENT" -> actorName + " เชิญ " + targetUserName + " เข้าร่วมกลุ่ม " + groupName;
+            case "INVITATION_ACCEPTED" -> targetUserName + " ตอบรับคำเชิญเข้ากลุ่ม " + groupName;
+            case "INVITATION_REJECTED" -> targetUserName + " ปฏิเสธคำเชิญเข้ากลุ่ม " + groupName;
             case "GROUP_CREATED"  -> actorName + " สร้างกลุ่มใหม่";
             case "GROUP_UPDATED"  -> actorName + " แก้ไขข้อมูลกลุ่ม";
             case "GROUP_DELETED"  -> actorName + " ลบกลุ่ม";
@@ -300,6 +338,7 @@ public class ActivityLogService implements IActivityLogService {
                 .eventEndDate(event == null ? null : event.getEndDate())
                 .targetUserId(a.getTargetUserId())
                 .targetUserName(a.getTargetUserName())
+                .invitationId(a.getInvitationId())
                 .actionDetail(a.getActionDetail())
                 .createdAt(a.getCreatedAt())
                 .build();

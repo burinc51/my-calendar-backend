@@ -80,6 +80,12 @@ public class ActivityLog {
     private String targetUserName;
 
     /**
+     * Optional: invitation reference for invitation-related actions.
+     */
+    @Column(name = "invitation_id")
+    private Long invitationId;
+
+    /**
      * Timestamp when the action occurred.
      */
     @Column(name = "created_at", nullable = false)

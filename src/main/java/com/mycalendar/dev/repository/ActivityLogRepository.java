@@ -16,10 +16,10 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
 
     /**
      * Personal feed behavior:
-     *  1) Current groups: show all actions (including this user's own actions),
-     *     except GROUP_CREATED by this user.
-     *  2) Left groups: still keep historical logs where this user was directly involved
-     *     (as actor or target), while excluding GROUP_CREATED by this user.
+             *  1) Current groups: show all actions (including this user's own actions),
+             *     except GROUP_CREATED by this user.
+             *  2) Left groups / pending invitations: still keep historical logs where this user
+             *     was directly involved (as actor or target), while excluding GROUP_CREATED by this user.
      */
     @Query("""
             SELECT a FROM ActivityLog a
@@ -35,7 +35,11 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
                     a.groupId NOT IN (
                         SELECT ug.id.groupId FROM UserGroup ug WHERE ug.id.userId = :userId
                     )
-                    AND (a.actorId = :userId OR a.targetUserId = :userId)
+                    AND (
+                        a.actorId = :userId
+                        OR a.targetUserId = :userId
+                        OR a.actionType IN ('INVITATION_SENT', 'INVITATION_ACCEPTED', 'INVITATION_REJECTED')
+                    )
                 )
             )
             AND NOT (a.actionType = 'GROUP_CREATED' AND a.actorId = :userId)

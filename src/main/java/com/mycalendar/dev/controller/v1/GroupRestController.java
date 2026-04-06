@@ -1,12 +1,16 @@
 package com.mycalendar.dev.controller.v1;
 
 import com.mycalendar.dev.payload.request.GroupAddMemberRequest;
+import com.mycalendar.dev.payload.request.GroupInviteUsersRequest;
 import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
+import com.mycalendar.dev.payload.response.GroupInvitationBatchResponse;
+import com.mycalendar.dev.payload.response.GroupInvitationResponse;
 import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.service.IGroupService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,6 +53,27 @@ public class GroupRestController {
     public ResponseEntity<String> addMemberGroup(@RequestBody GroupAddMemberRequest request) {
         groupService.addMemberToGroup(request);
         return ResponseEntity.ok("Member added successfully.");
+    }
+
+    @PostMapping("/{groupId}/invitations")
+    public ResponseEntity<GroupInvitationBatchResponse> inviteUsers(@PathVariable Long groupId,
+                                                                    @Valid @RequestBody GroupInviteUsersRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(groupService.inviteUsers(groupId, request));
+    }
+
+    @GetMapping("/invitations/pending")
+    public ResponseEntity<List<GroupInvitationResponse>> getPendingInvitations(@RequestParam(required = false) Long groupId) {
+        return ResponseEntity.ok(groupService.getPendingInvitations(groupId));
+    }
+
+    @PatchMapping("/invitations/{invitationId}/accept")
+    public ResponseEntity<GroupInvitationResponse> acceptInvitation(@PathVariable Long invitationId) {
+        return ResponseEntity.ok(groupService.acceptInvitation(invitationId));
+    }
+
+    @PatchMapping("/invitations/{invitationId}/reject")
+    public ResponseEntity<GroupInvitationResponse> rejectInvitation(@PathVariable Long invitationId) {
+        return ResponseEntity.ok(groupService.rejectInvitation(invitationId));
     }
 
     @GetMapping("/user/{userId}")

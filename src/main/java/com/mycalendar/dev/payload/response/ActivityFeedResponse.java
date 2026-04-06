@@ -44,6 +44,9 @@ public record ActivityFeedResponse(
         Long targetUserId,
         String targetUserName,
 
+        /** Populated when actionType is invitation-related */
+        Long invitationId,
+
         /** Optional detail text describing what changed */
         String actionDetail,
 

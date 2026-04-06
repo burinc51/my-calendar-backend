@@ -11,7 +11,8 @@ public interface IActivityLogService {
      * @param groupId           Group that the activity belongs to
      * @param actorId           User who performed the action
      * @param actionType        One of: EVENT_CREATED, EVENT_UPDATED, EVENT_DELETED,
-     *                          MEMBER_ADDED, MEMBER_REMOVED, GROUP_CREATED, GROUP_UPDATED, GROUP_DELETED
+     *                          MEMBER_ADDED, MEMBER_REMOVED, GROUP_CREATED, GROUP_UPDATED, GROUP_DELETED,
+     *                          INVITATION_SENT, INVITATION_ACCEPTED, INVITATION_REJECTED
      * @param eventId           Event involved (nullable)
      * @param eventTitle        Snapshot of the event title (nullable)
      * @param targetUserId      Target user for MEMBER_* actions (nullable)
@@ -26,6 +27,16 @@ public interface IActivityLogService {
                 boolean skipActivityPush);
 
     /**
+     * Same as record(...), with invitationId for invitation-related activities.
+     */
+    void record(Long groupId, Long actorId,
+                String actionType,
+                Long eventId, String eventTitle,
+                Long targetUserId, String targetUserName,
+                Long invitationId,
+                boolean skipActivityPush);
+
+    /**
      * Same as record(...), with optional actionDetail to describe what changed.
      */
     void record(Long groupId, Long actorId,
@@ -33,6 +44,17 @@ public interface IActivityLogService {
                 Long eventId, String eventTitle,
                 Long targetUserId, String targetUserName,
                 String actionDetail,
+                boolean skipActivityPush);
+
+    /**
+     * Same as record(...), with actionDetail and invitationId.
+     */
+    void record(Long groupId, Long actorId,
+                String actionType,
+                Long eventId, String eventTitle,
+                Long targetUserId, String targetUserName,
+                String actionDetail,
+                Long invitationId,
                 boolean skipActivityPush);
 
     /**
