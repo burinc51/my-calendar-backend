@@ -24,7 +24,7 @@ public class Permission {
     private Set<User> users = new HashSet<>();
 
     // Permission - Group
-    @ManyToMany(mappedBy = "permissions")
-    private Set<Group> groups = new HashSet<>();
+//    @ManyToMany(mappedBy = "permissions")
+//    private Set<Group> groups = new HashSet<>();
 }
 

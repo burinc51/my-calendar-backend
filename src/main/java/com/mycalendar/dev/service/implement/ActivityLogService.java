@@ -3,12 +3,14 @@ package com.mycalendar.dev.service.implement;
 import com.mycalendar.dev.entity.ActivityLog;
 import com.mycalendar.dev.entity.Event;
 import com.mycalendar.dev.entity.Group;
+import com.mycalendar.dev.entity.GroupInvitation;
 import com.mycalendar.dev.entity.PushToken;
 import com.mycalendar.dev.entity.User;
 import com.mycalendar.dev.payload.response.ActivityFeedResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
 import com.mycalendar.dev.repository.ActivityLogRepository;
 import com.mycalendar.dev.repository.EventRepository;
+import com.mycalendar.dev.repository.GroupInvitationRepository;
 import com.mycalendar.dev.repository.GroupRepository;
 import com.mycalendar.dev.repository.PushTokenRepository;
 import com.mycalendar.dev.repository.UserGroupRepository;
@@ -40,6 +42,7 @@ public class ActivityLogService implements IActivityLogService {
     private final ActivityLogRepository activityLogRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
+    private final GroupInvitationRepository groupInvitationRepository;
     private final GroupRepository groupRepository;
     private final UserGroupRepository userGroupRepository;
     private final PushTokenRepository pushTokenRepository;
@@ -114,26 +117,51 @@ public class ActivityLogService implements IActivityLogService {
                 .orElse(null);
 
         if (invitationLog == null) {
-            record(groupId, responderUserId, actionType, null, null, targetUserId, targetUserName, invitationId, skipActivityPush);
+            Long actorId = responderUserId;
+            String actorName = "Unknown";
+            String actorAvatar = null;
+
+            GroupInvitation invitation = groupInvitationRepository.findById(invitationId).orElse(null);
+            if (invitation != null && invitation.getInviterUser() != null) {
+                actorId = invitation.getInviterUser().getUserId();
+                actorName = invitation.getInviterUser().getName();
+                actorAvatar = invitation.getInviterUser().getPictureUrl();
+            }
+
+             ActivityLog newInvitationLog = new ActivityLog();
+             newInvitationLog.setGroupId(groupId);
+             newInvitationLog.setActorId(actorId);
+             newInvitationLog.setActorName(actorName);
+             newInvitationLog.setActorAvatar(actorAvatar);
+             newInvitationLog.setActionType(actionType);
+             newInvitationLog.setTargetUserId(targetUserId);
+             newInvitationLog.setTargetUserName(targetUserName);
+
+             // Resolve target user avatar snapshot
+             String targetAvatar = null;
+             if (targetUserId != null) {
+                 try {
+                     User targetUser = userRepository.findById(targetUserId).orElse(null);
+                     if (targetUser != null) {
+                         targetAvatar = targetUser.getPictureUrl();
+                     }
+                 } catch (Exception e) {
+                     log.warn("Could not resolve target user avatar for userId={}", targetUserId);
+                 }
+             }
+             newInvitationLog.setTargetAvatar(targetAvatar);
+             newInvitationLog.setInvitationId(invitationId);
+            newInvitationLog.setCreatedAt(LocalDateTime.now());
+            activityLogRepository.save(newInvitationLog);
+
+            if (!skipActivityPush) {
+                sendActivityPushNotification(groupId, responderUserId, actorName,
+                        actionType, null, targetUserId, targetUserName);
+            }
             return;
         }
 
-        String actorName = "Unknown";
-        String actorAvatar = null;
-        try {
-            User actor = userRepository.findById(responderUserId).orElse(null);
-            if (actor != null) {
-                actorName = actor.getName();
-                actorAvatar = actor.getPictureUrl();
-            }
-        } catch (Exception e) {
-            log.warn("Could not resolve actor snapshot for userId={}", responderUserId);
-        }
-
         invitationLog.setActionType(actionType);
-        invitationLog.setActorId(responderUserId);
-        invitationLog.setActorName(actorName);
-        invitationLog.setActorAvatar(actorAvatar);
         invitationLog.setTargetUserId(targetUserId);
         invitationLog.setTargetUserName(targetUserName);
         invitationLog.setCreatedAt(LocalDateTime.now());
@@ -143,7 +171,7 @@ public class ActivityLogService implements IActivityLogService {
             return;
         }
 
-        sendActivityPushNotification(groupId, responderUserId, actorName,
+        sendActivityPushNotification(groupId, responderUserId, invitationLog.getActorName(),
                 actionType, null, targetUserId, targetUserName);
     }
 
@@ -168,20 +196,35 @@ public class ActivityLogService implements IActivityLogService {
             log.warn("Could not resolve actor snapshot for userId={}", actorId);
         }
 
-        // Save activity log (always recorded regardless of skipActivityPush)
-        ActivityLog activityLog = new ActivityLog();
-        activityLog.setGroupId(groupId);
-        activityLog.setActorId(actorId);
-        activityLog.setActorName(actorName);
-        activityLog.setActorAvatar(actorAvatar);
-        activityLog.setActionType(actionType);
-        activityLog.setEventId(eventId);
-        activityLog.setEventTitle(eventTitle);
-        activityLog.setTargetUserId(targetUserId);
-        activityLog.setTargetUserName(targetUserName);
-        activityLog.setActionDetail(actionDetail);
-        activityLog.setInvitationId(invitationId);
-        activityLogRepository.save(activityLog);
+         // Save activity log (always recorded regardless of skipActivityPush)
+         ActivityLog activityLog = new ActivityLog();
+         activityLog.setGroupId(groupId);
+         activityLog.setActorId(actorId);
+         activityLog.setActorName(actorName);
+         activityLog.setActorAvatar(actorAvatar);
+         activityLog.setActionType(actionType);
+         activityLog.setEventId(eventId);
+         activityLog.setEventTitle(eventTitle);
+         activityLog.setTargetUserId(targetUserId);
+         activityLog.setTargetUserName(targetUserName);
+
+         // Resolve target user avatar snapshot
+         String targetAvatar = null;
+         if (targetUserId != null) {
+             try {
+                 User targetUser = userRepository.findById(targetUserId).orElse(null);
+                 if (targetUser != null) {
+                     targetAvatar = targetUser.getPictureUrl();
+                 }
+             } catch (Exception e) {
+                 log.warn("Could not resolve target user avatar for userId={}", targetUserId);
+             }
+         }
+         activityLog.setTargetAvatar(targetAvatar);
+
+         activityLog.setActionDetail(actionDetail);
+         activityLog.setInvitationId(invitationId);
+         activityLogRepository.save(activityLog);
         // Skip push when creator is the only assignee (no one else to notify)
         if (skipActivityPush) {
             log.debug("⏭️ Skipping activity push for {} — creator is the only assignee", actionType);
@@ -391,6 +434,7 @@ public class ActivityLogService implements IActivityLogService {
                 .eventEndDate(event == null ? null : event.getEndDate())
                 .targetUserId(a.getTargetUserId())
                 .targetUserName(a.getTargetUserName())
+                .targetAvatar(a.getTargetAvatar())
                 .invitationId(a.getInvitationId())
                 .actionDetail(a.getActionDetail())
                 .createdAt(a.getCreatedAt())

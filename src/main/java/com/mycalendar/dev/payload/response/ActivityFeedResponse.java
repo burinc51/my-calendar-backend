@@ -43,6 +43,7 @@ public record ActivityFeedResponse(
         /** Populated when actionType is member-related */
         Long targetUserId,
         String targetUserName,
+        String targetAvatar,
 
         /** Populated when actionType is invitation-related */
         Long invitationId,
@@ -53,4 +54,3 @@ public record ActivityFeedResponse(
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime createdAt
 ) {}
-

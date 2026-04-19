@@ -41,12 +41,12 @@ public class Group {
     private Set<Event> events = new HashSet<>();
 
     // Group - Permission (Many-to-Many)
-    @ManyToMany
-    @JoinTable(
-            name = "group_permission",
-            joinColumns = @JoinColumn(name = "group_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
-    private Set<Permission> permissions = new HashSet<>();
+//    @ManyToMany
+//    @JoinTable(
+//            name = "group_permission",
+//            joinColumns = @JoinColumn(name = "group_id"),
+//            inverseJoinColumns = @JoinColumn(name = "permission_id")
+//    )
+//    private Set<Permission> permissions = new HashSet<>();
     
 }

@@ -76,14 +76,20 @@ public class ActivityLog {
     @Column(name = "target_user_id")
     private Long targetUserId;
 
-    @Column(name = "target_user_name")
-    private String targetUserName;
+     @Column(name = "target_user_name")
+     private String targetUserName;
 
-    /**
-     * Optional: invitation reference for invitation-related actions.
-     */
-    @Column(name = "invitation_id")
-    private Long invitationId;
+     /**
+      * Avatar / profile-picture URL of the target user at the time of action (snapshot).
+      */
+     @Column(name = "target_avatar")
+     private String targetAvatar;
+
+     /**
+      * Optional: invitation reference for invitation-related actions.
+      */
+     @Column(name = "invitation_id")
+     private Long invitationId;
 
     /**
      * Timestamp when the action occurred.
@@ -116,15 +122,16 @@ public class ActivityLog {
         this.eventTitle = eventTitle;
     }
 
-    /** Constructor for member-related actions. */
-    public ActivityLog(Long groupId, Long actorId, String actorName, String actorAvatar,
-                       String actionType, Long targetUserId, String targetUserName, boolean isMemberAction) {
-        this.groupId        = groupId;
-        this.actorId        = actorId;
-        this.actorName      = actorName;
-        this.actorAvatar    = actorAvatar;
-        this.actionType     = actionType;
-        this.targetUserId   = targetUserId;
-        this.targetUserName = targetUserName;
-    }
+     /** Constructor for member-related actions. */
+     public ActivityLog(Long groupId, Long actorId, String actorName, String actorAvatar,
+                        String actionType, Long targetUserId, String targetUserName, String targetAvatar, boolean isMemberAction) {
+         this.groupId        = groupId;
+         this.actorId        = actorId;
+         this.actorName      = actorName;
+         this.actorAvatar    = actorAvatar;
+         this.actionType     = actionType;
+         this.targetUserId   = targetUserId;
+         this.targetUserName = targetUserName;
+         this.targetAvatar   = targetAvatar;
+     }
 }

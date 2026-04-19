@@ -6,9 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+@Repository
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
 
     /**
@@ -57,7 +59,7 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
             "    AND NOT (a.actionType = 'GROUP_CREATED' AND a.actorId = :userId) " +
             ") " +
             "OR ( " +
-            "    a.actionType = 'INVITATION_SENT' " +
+            "    a.actionType IN ('INVITATION_SENT', 'INVITATION_ACCEPTED', 'INVITATION_REJECTED') " +
             "    AND a.targetUserId = :userId " +
             ") " +
             "ORDER BY a.createdAt DESC"
