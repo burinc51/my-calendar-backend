@@ -16,6 +16,7 @@ import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupInvitationBatchResponse;
 import com.mycalendar.dev.payload.response.GroupInvitationResponse;
 import com.mycalendar.dev.payload.response.GroupInvitationSkipResponse;
+import com.mycalendar.dev.payload.response.GroupInvitableUserResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
@@ -36,9 +37,11 @@ import com.mycalendar.dev.exception.APIException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.time.LocalDateTime;
 
 @Service
@@ -230,6 +233,54 @@ public class GroupService implements IGroupService {
                         .imageUrl(v.getPictureUrl())
                         .build())
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginationResponse<GroupInvitableUserResponse> getInvitableUsers(Long groupId, PaginationRequest request) {
+        Long requestUserId = resolveCurrentUserId();
+
+        if (!groupRepository.existsById(groupId)) {
+            throw new NotFoundException("Group", "id", groupId.toString());
+        }
+        ensureAdminMember(groupId, requestUserId);
+
+        Set<Long> memberUserIds = new HashSet<>(userGroupRepository.findUserIdsByGroupId(groupId));
+        Set<Long> pendingInvitationUserIds = new HashSet<>(
+                groupInvitationRepository.findInvitedUserIdsByGroupIdAndStatus(groupId, GroupInvitationStatus.PENDING)
+        );
+
+        Page<User> candidatePage = userRepository.findUsersByRoleNameExcludingUser("USER", requestUserId, request.getPageRequest());
+
+        List<GroupInvitableUserResponse> content = candidatePage.getContent()
+                .stream()
+                .map(user -> GroupInvitableUserResponse.builder()
+                        .userId(user.getUserId())
+                        .username(user.getUsername())
+                        .name(user.getName())
+                        .imageUrl(user.getPictureUrl())
+                        .inviteStatus(resolveInviteStatus(user.getUserId(), memberUserIds, pendingInvitationUserIds))
+                        .build())
+                .toList();
+
+        return PaginationResponse.<GroupInvitableUserResponse>builder()
+                .content(content)
+                .pageNo(request.getPageNumber())
+                .pageSize(candidatePage.getSize())
+                .totalElements(candidatePage.getTotalElements())
+                .totalPages(candidatePage.getTotalPages())
+                .last(candidatePage.isLast())
+                .build();
+    }
+
+    private String resolveInviteStatus(Long userId, Set<Long> memberUserIds, Set<Long> pendingInvitationUserIds) {
+        if (memberUserIds.contains(userId)) {
+            return "ALREADY_IN_GROUP";
+        }
+        if (pendingInvitationUserIds.contains(userId)) {
+            return "INVITED";
+        }
+        return "INVITABLE";
     }
 
     @Override

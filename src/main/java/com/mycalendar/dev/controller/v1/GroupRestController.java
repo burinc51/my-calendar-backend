@@ -6,6 +6,7 @@ import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupInvitationBatchResponse;
 import com.mycalendar.dev.payload.response.GroupInvitationResponse;
+import com.mycalendar.dev.payload.response.GroupInvitableUserResponse;
 import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
@@ -85,6 +86,12 @@ public class GroupRestController {
     @GetMapping("/{groupId}/users")
     public ResponseEntity<List<GroupUserResponse>> getUsersByGroupId(@PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.getUsersByGroupId(groupId));
+    }
+
+    @PostMapping("/{groupId}/invitable-users")
+    public ResponseEntity<PaginationResponse<GroupInvitableUserResponse>> getInvitableUsers(@PathVariable Long groupId,
+                                                                                              @RequestBody PaginationRequest request) {
+        return ResponseEntity.ok(groupService.getInvitableUsers(groupId, request));
     }
 
     @DeleteMapping("/{groupId}/members/{userId}")

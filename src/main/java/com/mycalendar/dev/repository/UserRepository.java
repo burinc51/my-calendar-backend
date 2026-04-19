@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -38,4 +39,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u.userId FROM User u WHERE u.username = :username")
     Long findIdByUsername(@Param("username") String username);
+
+    @Query("""
+            SELECT DISTINCT u
+            FROM User u
+                JOIN u.roles r
+            WHERE r.name = :roleName
+              AND u.userId <> :requestUserId
+            ORDER BY u.name ASC, u.userId ASC
+            """)
+    List<User> findUsersByRoleNameExcludingUser(@Param("roleName") String roleName,
+                                                @Param("requestUserId") Long requestUserId);
+
+    @Query("""
+            SELECT DISTINCT u
+            FROM User u
+                JOIN u.roles r
+            WHERE r.name = :roleName
+              AND u.userId <> :requestUserId
+            """)
+    Page<User> findUsersByRoleNameExcludingUser(@Param("roleName") String roleName,
+                                                @Param("requestUserId") Long requestUserId,
+                                                Pageable pageable);
 }

@@ -6,6 +6,7 @@ import com.mycalendar.dev.payload.request.GroupRequest;
 import com.mycalendar.dev.payload.request.PaginationRequest;
 import com.mycalendar.dev.payload.response.GroupInvitationBatchResponse;
 import com.mycalendar.dev.payload.response.GroupInvitationResponse;
+import com.mycalendar.dev.payload.response.GroupInvitableUserResponse;
 import com.mycalendar.dev.payload.response.GroupResponse;
 import com.mycalendar.dev.payload.response.GroupUserResponse;
 import com.mycalendar.dev.payload.response.PaginationResponse;
@@ -26,6 +27,8 @@ public interface IGroupService {
     List<GroupResponse> getGroupsByUserId(Long userId);
 
     List<GroupUserResponse> getUsersByGroupId(Long groupId);
+
+    PaginationResponse<GroupInvitableUserResponse> getInvitableUsers(Long groupId, PaginationRequest request);
 
     void removeMember(Long groupId, Long userId);
 
