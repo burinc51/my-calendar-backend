@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
 
     /**
@@ -16,36 +18,57 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
 
     /**
      * Personal feed behavior:
-             *  1) Current groups: show all actions (including this user's own actions),
-             *     except GROUP_CREATED by this user.
-             *  2) Left groups / pending invitations: still keep historical logs where this user
-             *     was directly involved (as actor or target), while excluding GROUP_CREATED by this user.
+     *  1) Show group activity only from the moment the user joined that group.
+     *  2) Keep invitation rows visible only to the invited/responder user.
      */
-    @Query("""
-            SELECT a FROM ActivityLog a
-            WHERE (
-                (
-                    a.groupId IN (
-                        SELECT ug.id.groupId FROM UserGroup ug WHERE ug.id.userId = :userId
-                    )
-                    AND NOT (a.actionType = 'MEMBER_ADDED' AND a.targetUserId = :userId)
-                    AND NOT (a.actionType = 'MEMBER_REMOVED' AND a.targetUserId = :userId)
-                )
-                OR (
-                    a.groupId NOT IN (
-                        SELECT ug.id.groupId FROM UserGroup ug WHERE ug.id.userId = :userId
-                    )
-                    AND (
-                        a.actorId = :userId
-                        OR a.targetUserId = :userId
-                        OR a.actionType IN ('INVITATION_SENT', 'INVITATION_ACCEPTED', 'INVITATION_REJECTED')
-                    )
-                )
-            )
-            AND NOT (a.actionType = 'GROUP_CREATED' AND a.actorId = :userId)
-            ORDER BY a.createdAt DESC
-            """)
+    @Query(
+            "SELECT a FROM ActivityLog a " +
+            "WHERE ( " +
+            "    a.actionType NOT IN ('INVITATION_SENT') " +
+            "    AND EXISTS ( " +
+            "        SELECT ug FROM UserGroup ug " +
+            "        WHERE ug.id.userId = :userId " +
+            "          AND ug.id.groupId = a.groupId " +
+            "    ) " +
+            "    AND ( " +
+            "        ( " +
+            "            SELECT MAX(joinLog.createdAt) " +
+            "            FROM ActivityLog joinLog " +
+            "            WHERE joinLog.groupId = a.groupId " +
+            "              AND ( " +
+            "                    (joinLog.actionType = 'GROUP_CREATED' AND joinLog.actorId = :userId) " +
+            "                 OR (joinLog.actionType = 'MEMBER_ADDED' AND joinLog.targetUserId = :userId) " +
+            "                 OR (joinLog.actionType = 'INVITATION_ACCEPTED' AND joinLog.targetUserId = :userId) " +
+            "              ) " +
+            "        ) IS NULL " +
+            "        OR a.createdAt >= ( " +
+            "            SELECT MAX(joinLog.createdAt) " +
+            "            FROM ActivityLog joinLog " +
+            "            WHERE joinLog.groupId = a.groupId " +
+            "              AND ( " +
+            "                    (joinLog.actionType = 'GROUP_CREATED' AND joinLog.actorId = :userId) " +
+            "                 OR (joinLog.actionType = 'MEMBER_ADDED' AND joinLog.targetUserId = :userId) " +
+            "                 OR (joinLog.actionType = 'INVITATION_ACCEPTED' AND joinLog.targetUserId = :userId) " +
+            "              ) " +
+            "        ) " +
+            "    ) " +
+            "    AND NOT (a.actionType = 'MEMBER_ADDED' AND a.targetUserId = :userId) " +
+            "    AND NOT (a.actionType = 'MEMBER_REMOVED' AND a.targetUserId = :userId) " +
+            "    AND NOT (a.actionType = 'GROUP_CREATED' AND a.actorId = :userId) " +
+            ") " +
+            "OR ( " +
+            "    a.actionType = 'INVITATION_SENT' " +
+            "    AND a.targetUserId = :userId " +
+            ") " +
+            "ORDER BY a.createdAt DESC"
+    )
     Page<ActivityLog> findFeedByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Find latest invitation-sent activity for a specific invitation.
+     * Used to update one existing row when invitation is accepted/rejected.
+     */
+    Optional<ActivityLog> findTopByInvitationIdAndActionTypeOrderByIdDesc(Long invitationId, String actionType);
 
     /**
      * Fetch only actions PERFORMED BY a specific user (actorId = userId), newest first.
@@ -53,8 +76,4 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
      */
     Page<ActivityLog> findByActorIdOrderByCreatedAtDesc(Long actorId, Pageable pageable);
 
-    /**
-     * Count logs per group (for badge numbers etc.).
-     */
-    long countByGroupId(Long groupId);
 }

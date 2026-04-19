@@ -58,6 +58,19 @@ public interface IActivityLogService {
                 boolean skipActivityPush);
 
     /**
+     * Update existing INVITATION_SENT log row for this invitation to latest status
+     * (INVITATION_ACCEPTED / INVITATION_REJECTED). If the row is missing, fallback
+     * to creating a new one.
+     */
+    void updateInvitationStatus(Long groupId,
+                                Long responderUserId,
+                                String actionType,
+                                Long targetUserId,
+                                String targetUserName,
+                                Long invitationId,
+                                boolean skipActivityPush);
+
+    /**
      * Get a paginated activity feed for a specific group.
      */
     PaginationResponse<ActivityFeedResponse> getGroupFeed(Long groupId, int page, int size);

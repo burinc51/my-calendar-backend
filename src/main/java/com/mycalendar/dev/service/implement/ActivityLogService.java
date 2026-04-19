@@ -23,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -92,6 +93,58 @@ public class ActivityLogService implements IActivityLogService {
                        Long invitationId,
                        boolean skipActivityPush) {
         recordInternal(groupId, actorId, actionType, eventId, eventTitle, targetUserId, targetUserName, actionDetail, invitationId, skipActivityPush);
+    }
+
+    @Override
+    @Transactional
+    public void updateInvitationStatus(Long groupId,
+                                       Long responderUserId,
+                                       String actionType,
+                                       Long targetUserId,
+                                       String targetUserName,
+                                       Long invitationId,
+                                       boolean skipActivityPush) {
+        if (invitationId == null) {
+            recordInternal(groupId, responderUserId, actionType, null, null, targetUserId, targetUserName, null, null, skipActivityPush);
+            return;
+        }
+
+        ActivityLog invitationLog = activityLogRepository
+                .findTopByInvitationIdAndActionTypeOrderByIdDesc(invitationId, "INVITATION_SENT")
+                .orElse(null);
+
+        if (invitationLog == null) {
+            record(groupId, responderUserId, actionType, null, null, targetUserId, targetUserName, invitationId, skipActivityPush);
+            return;
+        }
+
+        String actorName = "Unknown";
+        String actorAvatar = null;
+        try {
+            User actor = userRepository.findById(responderUserId).orElse(null);
+            if (actor != null) {
+                actorName = actor.getName();
+                actorAvatar = actor.getPictureUrl();
+            }
+        } catch (Exception e) {
+            log.warn("Could not resolve actor snapshot for userId={}", responderUserId);
+        }
+
+        invitationLog.setActionType(actionType);
+        invitationLog.setActorId(responderUserId);
+        invitationLog.setActorName(actorName);
+        invitationLog.setActorAvatar(actorAvatar);
+        invitationLog.setTargetUserId(targetUserId);
+        invitationLog.setTargetUserName(targetUserName);
+        invitationLog.setCreatedAt(LocalDateTime.now());
+        activityLogRepository.save(invitationLog);
+
+        if (skipActivityPush) {
+            return;
+        }
+
+        sendActivityPushNotification(groupId, responderUserId, actorName,
+                actionType, null, targetUserId, targetUserName);
     }
 
     private void recordInternal(Long groupId, Long actorId,

@@ -428,12 +428,10 @@ public class GroupService implements IGroupService {
         invitation.setRespondedAt(LocalDateTime.now());
         invitation = groupInvitationRepository.save(invitation);
 
-        activityLogService.record(
+        activityLogService.updateInvitationStatus(
                 groupId,
                 userId,
                 "INVITATION_ACCEPTED",
-                null,
-                null,
                 invitation.getInvitedUser().getUserId(),
                 invitation.getInvitedUser().getName(),
                 invitation.getInvitationId(),
@@ -461,12 +459,10 @@ public class GroupService implements IGroupService {
         invitation.setRespondedAt(LocalDateTime.now());
         invitation = groupInvitationRepository.save(invitation);
 
-        activityLogService.record(
+        activityLogService.updateInvitationStatus(
                 invitation.getGroup().getGroupId(),
                 userId,
                 "INVITATION_REJECTED",
-                null,
-                null,
                 invitation.getInvitedUser().getUserId(),
                 invitation.getInvitedUser().getName(),
                 invitation.getInvitationId(),
