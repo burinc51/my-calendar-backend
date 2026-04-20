@@ -35,6 +35,10 @@ public record EventResponse(
         String imageUrl,
         Long createById,
         Long groupId,
+        String groupName,
+        String icon,
+        String groupColor,
+        String bg,
         List<EventUserResponse> assignees
 ) {
 }
