@@ -3,6 +3,7 @@ package com.mycalendar.dev.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -19,24 +20,25 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private static final String[] PERMITTED_PATHS = {
-            "/v1/auth/**",
+            "/api/v1/auth/**",
+            "/api/v1/users",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/api/events/**",
-            "/api/group/**"
+            "/actuator/health"
     };
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiAccessAuditFilter apiAccessAuditFilter;
 
-    @Value("${server.allowed-origins}")
+    @Value("${server.allowed-origins:}")
     private String[] allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
@@ -62,14 +64,11 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests(authorize -> authorize
-//                        .requestMatchers(PERMITTED_PATHS).permitAll()
-//                        .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
-//                        .requestMatchers(HttpMethod.POST, "/v1/users").permitAll()
-//                        .anyRequest().authenticated()
-//                )
                 .authorizeHttpRequests(authorize -> authorize
-                        .anyRequest().permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(PERMITTED_PATHS).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/images/**", "/videos/**", "/files/**", "/documents/**", "/attachments/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling.authenticationEntryPoint(jwtAuthenticationEntryPoint)
@@ -86,10 +85,21 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE"));
+
+        List<String> configuredOrigins = Arrays.stream(Objects.requireNonNullElse(allowedOrigins, new String[0]))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
+
+        // Fallback keeps Swagger usable on Railway/local even when env var is missing.
+        configuration.setAllowedOriginPatterns(configuredOrigins.isEmpty()
+                ? List.of("https://*.up.railway.app", "http://localhost:*", "https://localhost:*")
+                : configuredOrigins);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
