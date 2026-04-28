@@ -120,7 +120,7 @@ public class NoteService implements INoteService {
         Page<Note> page = noteRepository.findAll(specification, pageable);
 
         return NotePageResponse.builder()
-                .content(page.getContent().stream().map(this::toResponse).toList())
+                .content(page.getContent().stream().map(this::toResponse).collect(Collectors.toList()))
                 .pageNo(normalizedPageNo)
                 .pageSize(page.getSize())
                 .totalElements(page.getTotalElements())

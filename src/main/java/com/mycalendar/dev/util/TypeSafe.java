@@ -307,7 +307,7 @@ public class TypeSafe {
         return objs.stream()
                 .map(o -> safe(o, targetType))
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public static <T> List<T> safeList(Object[] objs, Class<T> targetType) {
@@ -315,7 +315,7 @@ public class TypeSafe {
         return Arrays.stream(objs)
                 .map(o -> safe(o, targetType))
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public static void validateSortBy(String sortBy, Class<?> entityClass) {
@@ -328,7 +328,7 @@ public class TypeSafe {
             validFields.addAll(
                     Arrays.stream(current.getDeclaredFields())
                             .map(Field::getName)
-                            .toList()
+                            .collect(Collectors.toList())
             );
             current = current.getSuperclass();
         }

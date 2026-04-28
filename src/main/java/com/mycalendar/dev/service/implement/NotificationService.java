@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,7 +63,6 @@ public class NotificationService implements INotificationService {
         List<Event> processedEvents = new java.util.ArrayList<>();
 
         for (Event event : eventsToNotify) {
-            // Guard against delete race: event could be removed after the initial query.
             if (!eventRepository.existsById(event.getEventId())) {
                 log.info("⏭️ Skip notification for deleted event {}", event.getEventId());
                 continue;
@@ -309,7 +309,7 @@ public class NotificationService implements INotificationService {
         return eventRepository.findNotificationScheduleByDate(fromDateTime, toDateTime, includeSent, groupId)
                 .stream()
                 .map(EventMapper::mapToDto)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     /**

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GroupMapper {
 
@@ -30,7 +31,7 @@ public class GroupMapper {
                                 .name(v.getUser().getName())
                                 .imageUrl(v.getUser().getPictureUrl())
                                 .build()
-                ).toList())
+                ).collect(Collectors.toList()))
                 .build();
     }
 

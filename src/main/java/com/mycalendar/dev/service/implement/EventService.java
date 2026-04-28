@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService implements IEventService {
@@ -91,7 +92,7 @@ public class EventService implements IEventService {
                     .map(User::getUserId)
                     .filter(userId -> group.getUserGroups().stream()
                             .noneMatch(ug -> ug.getUser().getUserId().equals(userId)))
-                    .toList();
+                    .collect(Collectors.toList());
             if (!invalidIds.isEmpty()) {
                 throw new IllegalArgumentException("Users with IDs " + invalidIds + " are not in the group");
             }
@@ -395,7 +396,7 @@ public class EventService implements IEventService {
             eventBuilder.assignees(assignees);
         }
 
-        return eventMap.values().stream().map(EventMonthViewResponse.EventMonthViewResponseBuilder::build).toList();
+        return eventMap.values().stream().map(EventMonthViewResponse.EventMonthViewResponseBuilder::build).collect(Collectors.toList());
     }
 
     private Long resolveCurrentUserId() {

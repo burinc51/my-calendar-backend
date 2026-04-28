@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 
 @Service
@@ -164,7 +165,7 @@ public class GroupService implements IGroupService {
     public PaginationResponse<GroupResponse> getAllGroup(PaginationRequest request) {
         Page<Group> pages = groupRepository.findAll(request.getPageRequest());
 
-        List<GroupResponse> groups = pages.getContent().stream().map(GroupMapper::mapToDto).toList();
+        List<GroupResponse> groups = pages.getContent().stream().map(GroupMapper::mapToDto).collect(Collectors.toList());
 
         return PaginationResponse.<GroupResponse>builder()
                 .content(groups)
@@ -232,7 +233,7 @@ public class GroupService implements IGroupService {
                         .name(v.getName())
                         .imageUrl(v.getPictureUrl())
                         .build())
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -250,9 +251,24 @@ public class GroupService implements IGroupService {
                 groupInvitationRepository.findInvitedUserIdsByGroupIdAndStatus(groupId, GroupInvitationStatus.PENDING)
         );
 
-        Page<User> candidatePage = userRepository.findUsersByRoleNameExcludingUser("USER", requestUserId, request.getPageRequest());
+        // Extract name filter from request
+        String nameFilter = "";
+        if (request.getFilter() != null && request.getFilter().containsKey("name")) {
+            Object nameValue = request.getFilter().get("name");
+            if (nameValue != null) {
+                nameFilter = nameValue.toString().trim();
+            }
+        }
 
-        List<GroupInvitableUserResponse> content = candidatePage.getContent()
+        // Fetch candidate users with or without name filter
+        Page<User> candidatePage;
+        if (nameFilter.isEmpty()) {
+            candidatePage = userRepository.findUsersByRoleNameExcludingUser("USER", requestUserId, request.getPageRequest());
+        } else {
+            candidatePage = userRepository.findUsersByRoleNameExcludingUserWithNameFilter("USER", requestUserId, nameFilter, request.getPageRequest());
+        }
+
+         List<GroupInvitableUserResponse> content = candidatePage.getContent()
                 .stream()
                 .map(user -> GroupInvitableUserResponse.builder()
                         .userId(user.getUserId())
@@ -261,7 +277,7 @@ public class GroupService implements IGroupService {
                         .imageUrl(user.getPictureUrl())
                         .inviteStatus(resolveInviteStatus(user.getUserId(), memberUserIds, pendingInvitationUserIds))
                         .build())
-                .toList();
+                .collect(Collectors.toList());
 
         return PaginationResponse.<GroupInvitableUserResponse>builder()
                 .content(content)
@@ -443,10 +459,10 @@ public class GroupService implements IGroupService {
             invitations = groupInvitationRepository.findByInvitedUserUserIdAndStatusOrderByInvitedAtDesc(userId, GroupInvitationStatus.PENDING);
         }
 
-        return invitations
+         return invitations
                 .stream()
                 .map(this::toInvitationResponse)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override

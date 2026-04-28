@@ -260,7 +260,7 @@ public class ActivityLogService implements IActivityLogService {
                         .filter(id -> !id.equals(actorId))
                             .filter(id -> !("MEMBER_ADDED".equals(actionType)
                                     && id.equals(targetUserId)))
-                        .toList());
+                        .collect(Collectors.toList()));
 
                 if ("MEMBER_REMOVED".equals(actionType)
                         && targetUserId != null
@@ -386,7 +386,7 @@ public class ActivityLogService implements IActivityLogService {
                                 .map(ActivityLog::getGroupId)
                                 .filter(Objects::nonNull)
                                 .distinct()
-                                .toList())
+                                .collect(Collectors.toList()))
                 .stream()
                 .collect(Collectors.toMap(Group::getGroupId, Function.identity()));
 
@@ -395,7 +395,7 @@ public class ActivityLogService implements IActivityLogService {
                                 .map(ActivityLog::getEventId)
                                 .filter(Objects::nonNull)
                                 .distinct()
-                                .toList())
+                                .collect(Collectors.toList()))
                 .stream()
                 .collect(Collectors.toMap(Event::getEventId, Function.identity()));
 

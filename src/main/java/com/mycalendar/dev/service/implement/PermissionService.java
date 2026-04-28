@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.mycalendar.dev.util.TypeSafe.validateSortBy;
 
@@ -40,7 +41,7 @@ public class PermissionService implements IPermissionService {
                         .permissionId(value.getPermissionId())
                         .permissionName(value.getPermissionName())
                         .build()
-        ).toList();
+        ).collect(Collectors.toList());
 
         return PaginationResponse.<PermissionResponse>builder()
                 .content(content)

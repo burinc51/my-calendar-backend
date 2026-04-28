@@ -61,4 +61,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findUsersByRoleNameExcludingUser(@Param("roleName") String roleName,
                                                 @Param("requestUserId") Long requestUserId,
                                                 Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT u
+            FROM User u
+                JOIN u.roles r
+            WHERE r.name = :roleName
+              AND u.userId <> :requestUserId
+              AND (LOWER(u.name) LIKE LOWER(CONCAT('%', :nameFilter, '%'))
+                   OR LOWER(u.username) LIKE LOWER(CONCAT('%', :nameFilter, '%')))
+            """)
+    Page<User> findUsersByRoleNameExcludingUserWithNameFilter(
+            @Param("roleName") String roleName,
+            @Param("requestUserId") Long requestUserId,
+            @Param("nameFilter") String nameFilter,
+            Pageable pageable);
 }
